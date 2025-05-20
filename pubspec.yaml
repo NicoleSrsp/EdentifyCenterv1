@@ -1,0 +1,37 @@
+name: edentifyweb
+description: "A new Flutter project."
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.7.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  firebase_core: ^2.27.0
+  cloud_firestore: ^4.13.0
+  firebase_auth: ^4.17.3
+  google_fonts: ^6.1.0
+  cupertino_icons: ^1.0.6
+  firebase_auth_web: any
+  js: ^0.6.7
+  table_calendar: ^3.2.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/background.png
+    - assets/logo.png
+
+  # fonts:
+  #   - family: Roboto
+  #     fonts:
+  #       - asset: assets/fonts/Roboto-Bold.ttf
+  #       - asset: assets/fonts/Roboto-Regular.ttf
+  #         weight: 700

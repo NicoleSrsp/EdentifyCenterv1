@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "1011534609104",
+    "project_id": "edentify-thesis",
+    "storage_bucket": "edentify-thesis.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1011534609104:android:39f740173ae290cb1a3cd5",
+        "android_client_info": {
+          "package_name": "com.example.edentify"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC5ceWmS2WOD3ptBnUO8OaoKU7elCc4Ur4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1011534609104:android:54a3aaf4d2de6bf21a3cd5",
+        "android_client_info": {
+          "package_name": "com.example.edentifyweb"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC5ceWmS2WOD3ptBnUO8OaoKU7elCc4Ur4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
