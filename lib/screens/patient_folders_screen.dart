@@ -73,6 +73,7 @@ class PatientFoldersScreen extends StatelessWidget {
                       builder: (context) => EntryDetailScreen(
                         folder: folderData,    
                         docId: folderDoc.id,  
+                        collectionName: 'pending_approvals',
                         readonly: true,       
                       ),
                     ),

@@ -5,7 +5,7 @@ import 'entry_detail_screen.dart';
 class PendingApprovalScreen extends StatelessWidget {
   const PendingApprovalScreen({super.key});
 
-  final String doctorId = 'doctor_001'; 
+  final String doctorId = 'doctor_001';
 
   @override
   Widget build(BuildContext context) {
@@ -50,9 +50,10 @@ class PendingApprovalScreen extends StatelessWidget {
                         context,
                         MaterialPageRoute(
                           builder: (context) => EntryDetailScreen(
-                            folder: approval.data() as Map<String, dynamic>,  
-                            docId: approval.id,  
-                            readonly: false,      
+                            folder: approval.data() as Map<String, dynamic>,
+                            docId: approval.id,
+                            collectionName: 'pending_approvals',  // <-- Pass collection name
+                            readonly: false,
                           ),
                         ),
                       );

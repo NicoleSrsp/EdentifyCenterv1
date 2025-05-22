@@ -38,9 +38,9 @@ class _CenterSelectionScreenState extends State<CenterSelectionScreen> {
           ),
           Center(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0), // horizontal margin
+              padding: const EdgeInsets.symmetric(horizontal: 24.0), 
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 400), // max width of the form
+                constraints: const BoxConstraints(maxWidth: 400),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [

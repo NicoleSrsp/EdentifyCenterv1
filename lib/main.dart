@@ -11,6 +11,7 @@ import 'screens/pending_approval_screen.dart';
 import 'screens/schedules_screen.dart';
 import 'screens/patient_folders_screen.dart';
 import 'screens/entry_detail_screen.dart';
+import 'screens/archive_patient_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -98,10 +99,23 @@ class EdentifyApp extends StatelessWidget {
                   body: Center(child: Text('Missing folder or docId')),
                 ),
               );
-          }
-          return MaterialPageRoute(
-            builder: (_) => EntryDetailScreen(folder: folder, docId: docId),
-          );
+            }
+            return MaterialPageRoute(
+              builder: (_) => EntryDetailScreen(folder: folder, docId: docId, collectionName: 'pending_approvals',),
+            );
+
+          case '/archivedPatients':
+            final centerName = settings.arguments as String?;
+            if (centerName == null || centerName.isEmpty) {
+              return MaterialPageRoute(
+                builder: (_) => const Scaffold(
+                  body: Center(child: Text('No center specified')),
+                ),
+              );
+            }
+            return MaterialPageRoute(
+              builder: (_) => ArchivedPatientsScreen(centerName: centerName),
+            );
 
           default:
             return null;

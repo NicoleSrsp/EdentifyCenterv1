@@ -4,12 +4,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class EntryDetailScreen extends StatefulWidget {
   final Map<String, dynamic> folder;
   final String docId;
+  final String collectionName;
   final bool readonly;
 
   const EntryDetailScreen({
     super.key,
     required this.folder,
     required this.docId,
+    required this.collectionName,
     this.readonly = false, 
   });
 
@@ -73,7 +75,7 @@ class _EntryDetailScreenState extends State<EntryDetailScreen> {
 
     try {
       await FirebaseFirestore.instance
-          .collection('folders')
+          .collection(widget.collectionName)
           .doc(docId)
           .update({'doctor_note': _noteController.text});
       ScaffoldMessenger.of(context).showSnackBar(
@@ -138,7 +140,7 @@ class _EntryDetailScreenState extends State<EntryDetailScreen> {
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: const Color.fromARGB(255, 0, 121, 107),
-        iconTheme: const IconThemeData(color: Colors.white), // Makes back button white
+        iconTheme: const IconThemeData(color: Colors.white),
         title: Row(
           children: [
             Image.asset('assets/logo.png', height: 40),
@@ -204,7 +206,6 @@ class _EntryDetailScreenState extends State<EntryDetailScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Only show edema classification review when NOT readonly
                       if (!widget.readonly) ...[
                         const Text("Edema Classification Review:", style: TextStyle(fontWeight: FontWeight.bold)),
                         const SizedBox(height: 8),
@@ -319,7 +320,7 @@ class _EntryDetailScreenState extends State<EntryDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: TextStyle(color: Colors.grey[600])),
+          Text(label, style: TextStyle(color: const Color.fromARGB(255, 39, 39, 39))),
           const SizedBox(height: 5),
           SizedBox(
             width: 120,
