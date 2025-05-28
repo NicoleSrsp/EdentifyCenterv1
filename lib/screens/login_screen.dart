@@ -33,102 +33,102 @@ class _DoctorLoginScreenState extends State<DoctorLoginScreen> {
     super.dispose();
   }
 
-  Future<void> _login() async {
-    if (!_formKey.currentState!.validate() || _accountLocked) return;
+ Future<void> _login() async {
+  if (!_formKey.currentState!.validate() || _accountLocked) return;
 
-    setState(() {
-      _isLoading = true;
-      _errorText = '';
-    });
+  setState(() {
+    _isLoading = true;
+    _errorText = '';
+  });
 
+  try {
+    // 1. Verify doctor exists in Firestore
+    final doctorSnapshot = await FirebaseFirestore.instance
+        .collection('doctor_inCharge')
+        .where('name', isEqualTo: widget.doctorName)
+        .where('email', isEqualTo: _emailController.text.trim())
+        .limit(1)
+        .get();
+
+    if (doctorSnapshot.docs.isEmpty) {
+      throw FirebaseAuthException(
+        code: 'doctor-not-found',
+        message: 'No doctor found with these credentials',
+      );
+    }
+
+    final doc = doctorSnapshot.docs.first;
+    final data = doc.data() as Map<String, dynamic>;
+    final doctorId = doc.id;
+    final isFirstLogin = data['isFirstLogin'] ?? false;
+
+    // 2. Check if account is locked
+    if (_loginAttempts >= 3 || (data['isLocked'] ?? false)) {
+      await _lockAccount(doctorId);
+      throw FirebaseAuthException(
+        code: 'account-locked',
+        message: 'Account locked. Please contact administrator.',
+      );
+    }
+
+    // 3. Authenticate with Firebase Auth
     try {
-      // 1. Verify doctor exists in Firestore
-      final doctorSnapshot = await FirebaseFirestore.instance
-          .collection('doctor_inCharge')
-          .where('name', isEqualTo: widget.doctorName)
-          .where('email', isEqualTo: _emailController.text.trim())
-          .limit(1)
-          .get();
-
-      if (doctorSnapshot.docs.isEmpty) {
-        throw FirebaseAuthException(
-          code: 'doctor-not-found',
-          message: 'No doctor found with these credentials',
-        );
-      }
-
-      final doc = doctorSnapshot.docs.first;
-      final data = doc.data() as Map<String, dynamic>;
-      final doctorId = doc.id;
-      final isFirstLogin = data['isFirstLogin'] ?? false;
-
-      // 2. Check if account is locked
-      if (_loginAttempts >= 3 || (data['isLocked'] ?? false)) {
-        await _lockAccount(doctorId);
-        throw FirebaseAuthException(
-          code: 'account-locked',
-          message: 'Account locked. Please contact administrator.',
-        );
-      }
-
-      // 3. Authenticate with Firebase Auth
-      try {
-        await FirebaseAuth.instance.signInWithEmailAndPassword(
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'user-not-found') {
+        await FirebaseAuth.instance.createUserWithEmailAndPassword(
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
         );
-      } on FirebaseAuthException catch (e) {
-        if (e.code == 'user-not-found') {
-          // Create auth user if missing (but exists in Firestore)
-          await FirebaseAuth.instance.createUserWithEmailAndPassword(
-            email: _emailController.text.trim(),
-            password: _passwordController.text.trim(),
-          );
-        } else {
-          throw e;
-        }
-      }
-
-      // 4. Reset login attempts on success
-      _loginAttempts = 0;
-
-      // 5. Navigate based on first login status
-      if (isFirstLogin) {
-        Navigator.pushReplacementNamed(
-          context,
-          '/change-password',
-          arguments: {
-            'doctorId': doctorId,
-            'centerName': widget.centerName,
-            'doctorName': widget.doctorName,
-          },
-        );
       } else {
-        Navigator.pushReplacementNamed(
-          context,
-          '/home',
-          arguments: {
-            'centerName': widget.centerName,
-            'doctorName': widget.doctorName,
-          },
-        );
+        throw e;
       }
-    } on FirebaseAuthException catch (e) {
-      _loginAttempts++;
-      setState(() {
-        _errorText = _getErrorMessage(e.code);
-        if (_loginAttempts >= 3) {
-          _accountLocked = true;
-        }
-      });
-    } catch (e) {
-      setState(() {
-        _errorText = 'Login failed: ${e.toString()}';
-      });
-    } finally {
-      setState(() => _isLoading = false);
     }
+
+    // 4. Reset login attempts on success
+    _loginAttempts = 0;
+
+    // 5. Navigate based on first login status
+    if (isFirstLogin) {
+      Navigator.pushReplacementNamed(
+        context,
+        '/changePassword',
+        arguments: {
+          'doctorId': doctorId,
+          'centerName': widget.centerName,
+          'doctorName': widget.doctorName,
+        },
+      );
+    } else {
+      Navigator.pushReplacementNamed(
+        context,
+        '/home',
+        arguments: {
+          'centerName': widget.centerName,
+          'doctorId': doctorId,
+        },
+      );
+    }
+  } on FirebaseAuthException catch (e) {
+    _loginAttempts++;
+    setState(() {
+      _errorText = _getErrorMessage(e.code);
+      if (_loginAttempts >= 3) {
+        _accountLocked = true;
+      }
+    });
+  } catch (e) {
+    setState(() {
+      _errorText = 'Login failed: ${e.toString()}';
+    });
+  } finally {
+    setState(() => _isLoading = false);
   }
+}
+
 
   Future<void> _lockAccount(String doctorId) async {
     await FirebaseFirestore.instance

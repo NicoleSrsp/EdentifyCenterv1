@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class EntryDetailScreen extends StatefulWidget {
+class PatientHistoryScreen extends StatefulWidget {
   final Map<String, dynamic> folder;
   final String docId;
   final String collectionName;
   final bool readonly;
 
-  const EntryDetailScreen({
+  const PatientHistoryScreen({
     super.key,
     required this.folder,
     required this.docId,
@@ -16,10 +16,10 @@ class EntryDetailScreen extends StatefulWidget {
   });
 
   @override
-  State<EntryDetailScreen> createState() => _EntryDetailScreenState();
+  State<PatientHistoryScreen> createState() => _PatientHistoryScreenState();
 }
 
-class _EntryDetailScreenState extends State<EntryDetailScreen> {
+class _PatientHistoryScreenState extends State<PatientHistoryScreen> {
   late TextEditingController _noteController;
   String patientName = 'Loading...';
 

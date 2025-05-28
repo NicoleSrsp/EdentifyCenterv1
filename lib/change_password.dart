@@ -5,13 +5,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class ChangePasswordScreen extends StatefulWidget {
   final String doctorId;
   final String centerName;
-  final String doctorName;
+
 
   const ChangePasswordScreen({
     super.key,
     required this.doctorId,
     required this.centerName,
-    required this.doctorName,
+
   });
 
   @override
@@ -74,7 +74,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
         '/home',
         arguments: {
           'centerName': widget.centerName,
-          'doctorName': widget.doctorName,
+          'doctorName': widget.doctorId,
         },
       );
     } on FirebaseAuthException catch (e) {
@@ -140,7 +140,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        widget.doctorName,
+                        widget.doctorId,
                         style: const TextStyle(
                           fontSize: 16,
                           color: Colors.white,

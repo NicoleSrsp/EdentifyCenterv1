@@ -11,7 +11,7 @@ import 'screens/notifications_screen.dart';
 import 'screens/pending_approval_screen.dart';
 import 'screens/schedules_screen.dart';
 import 'screens/patient_folders_screen.dart';
-import 'screens/entry_detail_screen.dart';
+import 'screens/patient_history_screen.dart';
 import 'screens/archive_patient_screen.dart';
 
 void main() async {
@@ -55,8 +55,8 @@ class EdentifyApp extends StatelessWidget {
             final args = settings.arguments as Map<String, dynamic>;
             return MaterialPageRoute(
               builder: (_) => DoctorLoginScreen(
-                centerName: args['centerName'] as String,
-                doctorName: args['doctorName'] as String,
+                centerName: args['centerName'],
+                doctorName: args['doctorName'],
               ),
             );
 
@@ -64,23 +64,26 @@ class EdentifyApp extends StatelessWidget {
             final args = settings.arguments as Map<String, dynamic>;
             return MaterialPageRoute(
               builder: (_) => ChangePasswordScreen(
-                doctorId: args['doctorId'] as String,
-                centerName: args['centerName'] as String,
-                doctorName: args['doctorName'] as String,
+                doctorId: args['doctorId'],
+                centerName: args['centerName'],
               ),
             );
 
           case '/home':
-            final args = settings.arguments as Map<String, dynamic>?;
-            if (args == null) {
-              return MaterialPageRoute(builder: (_) => const LandingPage());
-            }
-            return MaterialPageRoute(
-              builder: (_) => HomeScreen(
-                centerName: args['centerName'] as String,
-                doctorName: args['doctorName'] as String,
-              ),
-            );
+             final args = settings.arguments as Map<String, dynamic>?;
+              if (args == null || args['centerName'] == null || args['doctorId'] == null) {
+                return MaterialPageRoute(
+                  builder: (_) => const Scaffold(
+                    body: Center(child: Text('Missing center or doctor name')),
+                  ),
+                );
+              }
+              return MaterialPageRoute(
+                builder: (_) => HomeScreen(
+                  centerName: args['centerName'],
+                  doctorId: args['doctorId'],
+                ),
+              );
 
           case '/notifications':
             return MaterialPageRoute(
@@ -99,7 +102,7 @@ class EdentifyApp extends StatelessWidget {
             final patientId = settings.arguments as String?;
             if (patientId == null || patientId.isEmpty) {
               return MaterialPageRoute(
-                builder: (_) => const HomeScreen(centerName: '', doctorName: ''),
+                builder: (_) => const HomeScreen(centerName: '', doctorId: ''),
               );
             }
             return MaterialPageRoute(
@@ -127,7 +130,7 @@ class EdentifyApp extends StatelessWidget {
               );
             }
             return MaterialPageRoute(
-              builder: (_) => EntryDetailScreen(
+              builder: (_) => PatientHistoryScreen(
                 folder: folder,
                 docId: docId,
                 collectionName: 'pending_approvals',
