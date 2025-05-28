@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class CenterSelectionScreen extends StatefulWidget {
   const CenterSelectionScreen({super.key});
@@ -8,13 +9,28 @@ class CenterSelectionScreen extends StatefulWidget {
 }
 
 class _CenterSelectionScreenState extends State<CenterSelectionScreen> {
-  String? selectedCenter;
+  final _formKey = GlobalKey<FormState>();
+  String? selectedDialysisCenter;
+  String? selectedDoctor;
 
-  final List<String> centers = [
-    'R&B Dialysis Center',
-    'USWAG Dialysis Center - Molo Branch',
-    'USWAG Dialysis Center - San Isidro Branch',
-  ];
+  // Map of centers to their doctors
+  final Map<String, List<String>> centerDoctors = {
+    'R&B Dialysis Center': ['Dr. Rebecca Santos', 'Dr. Enrique Navarro'],
+    'RSI Dialysis Center': ['Dr. James Chua', 'Dr. Timothy Ong'],
+    'Hartman Dialysis Center': ['Dr. Andres Gomez', 'Dr. Melissa Tan'],
+  };
+
+  List<String> availableDoctors = [];
+  bool showDoctorDropdown = false;
+
+  void _onCenterSelected(String? value) {
+    setState(() {
+      selectedDialysisCenter = value;
+      selectedDoctor = null;
+      availableDoctors = value != null ? centerDoctors[value]! : [];
+      showDoctorDropdown = value != null;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +54,7 @@ class _CenterSelectionScreenState extends State<CenterSelectionScreen> {
           ),
           Center(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0), 
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 400),
                 child: Column(
@@ -58,47 +74,78 @@ class _CenterSelectionScreenState extends State<CenterSelectionScreen> {
                       style: TextStyle(fontSize: 18, color: Colors.white),
                     ),
                     const SizedBox(height: 20),
+                    // Center Dropdown
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 4),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: DropdownButton<String>(
                         isExpanded: true,
-                        value: selectedCenter,
+                        value: selectedDialysisCenter,
                         hint: const Text("Select Dialysis Center"),
                         underline: const SizedBox(),
-                        items: centers.map((center) {
+                        items: centerDoctors.keys.map((center) {
                           return DropdownMenuItem(
                             value: center,
                             child: Text(center),
                           );
                         }).toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            selectedCenter = value;
-                          });
-                        },
+                        onChanged: _onCenterSelected,
                       ),
                     ),
+                    const SizedBox(height: 20),
+                    // Doctor Dropdown (only shown when center is selected)
+                    if (showDoctorDropdown)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: DropdownButton<String>(
+                          isExpanded: true,
+                          value: selectedDoctor,
+                          hint: const Text("Select Doctor"),
+                          underline: const SizedBox(),
+                          items: availableDoctors.map((doctor) {
+                            return DropdownMenuItem(
+                              value: doctor,
+                              child: Text(doctor),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              selectedDoctor = value;
+                            });
+                          },
+                        ),
+                      ),
                     const SizedBox(height: 20),
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
                         foregroundColor: Colors.black,
-                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 32, vertical: 18),
                       ),
-                      onPressed: selectedCenter == null
+                      onPressed: selectedDoctor == null
                           ? null
                           : () {
                               Navigator.pushNamed(
                                 context,
                                 '/login',
-                                arguments: selectedCenter,
+                                arguments: {
+                                  'centerName': selectedDialysisCenter,
+                                  'doctorName': selectedDoctor,
+                                },
                               );
                             },
-                      child: const Text("Continue", style: TextStyle(fontWeight: FontWeight.bold)),
+                      child: const Text("Continue",
+                          style: TextStyle(fontWeight: FontWeight.bold)),
                     ),
                   ],
                 ),

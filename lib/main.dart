@@ -5,6 +5,7 @@ import 'firebase_options.dart';
 import 'screens/landing_page.dart';
 import 'screens/center_selection.dart';
 import 'screens/login_screen.dart';
+import 'change_password.dart';
 import 'screens/home_screen.dart';
 import 'screens/notifications_screen.dart';
 import 'screens/pending_approval_screen.dart';
@@ -15,9 +16,7 @@ import 'screens/archive_patient_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const EdentifyApp());
 }
 
@@ -30,7 +29,6 @@ class EdentifyApp extends StatelessWidget {
       title: 'Edentify Dashboard',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        fontFamily: '',
         scaffoldBackgroundColor: const Color.fromARGB(255, 255, 255, 255),
         colorScheme: ColorScheme.fromSwatch().copyWith(
           primary: const Color.fromARGB(255, 0, 121, 107),
@@ -49,26 +47,50 @@ class EdentifyApp extends StatelessWidget {
             return MaterialPageRoute(builder: (_) => const LandingPage());
 
           case '/centerSelection':
-            return MaterialPageRoute(builder: (_) => const CenterSelectionScreen());
+            return MaterialPageRoute(
+              builder: (_) => const CenterSelectionScreen(),
+            );
 
           case '/login':
-            final centerName = settings.arguments as String;
+            final args = settings.arguments as Map<String, dynamic>;
             return MaterialPageRoute(
-              builder: (_) => LoginScreen(centerName: centerName),
+              builder: (_) => DoctorLoginScreen(
+                centerName: args['centerName'] as String,
+                doctorName: args['doctorName'] as String,
+              ),
+            );
+
+          case '/changePassword':
+            final args = settings.arguments as Map<String, dynamic>;
+            return MaterialPageRoute(
+              builder: (_) => ChangePasswordScreen(
+                doctorId: args['doctorId'] as String,
+                centerName: args['centerName'] as String,
+                doctorName: args['doctorName'] as String,
+              ),
             );
 
           case '/home':
-            final centerName = settings.arguments as String?;
-            if (centerName == null) {
+            final args = settings.arguments as Map<String, dynamic>?;
+            if (args == null) {
               return MaterialPageRoute(builder: (_) => const LandingPage());
             }
-            return MaterialPageRoute(builder: (_) => HomeScreen(centerName: centerName));
+            return MaterialPageRoute(
+              builder: (_) => HomeScreen(
+                centerName: args['centerName'] as String,
+                doctorName: args['doctorName'] as String,
+              ),
+            );
 
           case '/notifications':
-            return MaterialPageRoute(builder: (_) => const NotificationsScreen());
+            return MaterialPageRoute(
+              builder: (_) => const NotificationsScreen(),
+            );
 
           case '/pending-approval':
-            return MaterialPageRoute(builder: (_) => const PendingApprovalScreen());
+            return MaterialPageRoute(
+              builder: (_) => const PendingApprovalScreen(),
+            );
 
           case '/schedules':
             return MaterialPageRoute(builder: (_) => const SchedulesScreen());
@@ -76,7 +98,9 @@ class EdentifyApp extends StatelessWidget {
           case '/folders':
             final patientId = settings.arguments as String?;
             if (patientId == null || patientId.isEmpty) {
-              return MaterialPageRoute(builder: (_) => const HomeScreen(centerName: ''));
+              return MaterialPageRoute(
+                builder: (_) => const HomeScreen(centerName: '', doctorName: ''),
+              );
             }
             return MaterialPageRoute(
               builder: (_) => PatientFoldersScreen(patientId: patientId),
@@ -87,7 +111,9 @@ class EdentifyApp extends StatelessWidget {
             if (args == null || args is! Map<String, dynamic>) {
               return MaterialPageRoute(
                 builder: (_) => const Scaffold(
-                  body: Center(child: Text('Invalid data passed to EntryDetailScreen')),
+                  body: Center(
+                    child: Text('Invalid data passed to EntryDetailScreen'),
+                  ),
                 ),
               );
             }
@@ -101,7 +127,11 @@ class EdentifyApp extends StatelessWidget {
               );
             }
             return MaterialPageRoute(
-              builder: (_) => EntryDetailScreen(folder: folder, docId: docId, collectionName: 'pending_approvals',),
+              builder: (_) => EntryDetailScreen(
+                folder: folder,
+                docId: docId,
+                collectionName: 'pending_approvals',
+              ),
             );
 
           case '/archivedPatients':
@@ -118,7 +148,11 @@ class EdentifyApp extends StatelessWidget {
             );
 
           default:
-            return null;
+            return MaterialPageRoute(
+              builder: (_) => const Scaffold(
+                body: Center(child: Text('Page not found')),
+              ),
+            );
         }
       },
     );
