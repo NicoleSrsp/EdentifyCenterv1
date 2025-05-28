@@ -1,84 +1,175 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'entry_detail_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'patient_history_screen.dart';
 
-class PatientFoldersScreen extends StatelessWidget {
+class PatientFoldersScreen extends StatefulWidget {
   final String patientId;
-  const PatientFoldersScreen({super.key, required this.patientId});
+  const PatientFoldersScreen({Key? key, required this.patientId}) : super(key: key);
+
+  @override
+  _PatientFoldersScreenState createState() => _PatientFoldersScreenState();
+}
+
+class _PatientFoldersScreenState extends State<PatientFoldersScreen> {
+  Map<String, dynamic>? patientData;
+  Map<DateTime, Map<String, List<Map<String, dynamic>>>> dataByDate = {};
+  bool isLoading = true;
+  String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchPatientDataAndSubcollections();
+  }
+
+  Future<void> _fetchPatientDataAndSubcollections() async {
+    try {
+      final userDocRef = FirebaseFirestore.instance.collection('users').doc(widget.patientId);
+      final userDocSnap = await userDocRef.get();
+
+      if (!userDocSnap.exists) {
+        setState(() {
+          error = 'Patient data not found.';
+          isLoading = false;
+        });
+        return;
+      }
+
+      patientData = userDocSnap.data();
+
+      // Fetch subcollections in parallel
+      final scanSnap = await userDocRef.collection('scanHistory').get();
+      final treatmentSnap = await userDocRef.collection('treatment_data').get();
+      final waterSnap = await userDocRef.collection('waterIntake').get();
+
+      // Helper to extract dateKey/dates in DateTime (year, month, day only)
+      DateTime? extractDate(Map<String, dynamic> docData, List<String> possibleFields) {
+        for (var field in possibleFields) {
+          if (docData[field] != null) {
+            final val = docData[field];
+            if (val is Timestamp) {
+              final dt = val.toDate();
+              return DateTime(dt.year, dt.month, dt.day);
+            } else if (val is String) {
+              // try parse string date if needed
+              try {
+                final dt = DateTime.parse(val);
+                return DateTime(dt.year, dt.month, dt.day);
+              } catch (_) {}
+            }
+          }
+        }
+        return null;
+      }
+
+      void addDataToMap(List<QueryDocumentSnapshot> docs, String subCollectionName, List<String> dateFields) {
+        for (var doc in docs) {
+          final data = doc.data() as Map<String, dynamic>;
+          final date = extractDate(data, dateFields);
+          if (date != null) {
+            dataByDate.putIfAbsent(date, () => {});
+            dataByDate[date]!.putIfAbsent(subCollectionName, () => []);
+            dataByDate[date]![subCollectionName]!.add(data);
+          }
+        }
+      }
+
+      addDataToMap(scanSnap.docs, 'scanHistory', ['dateKey']);
+      addDataToMap(treatmentSnap.docs, 'treatment_data', ['dialysisDate']);
+      addDataToMap(waterSnap.docs, 'waterIntake', ['date']);
+
+      setState(() {
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        error = 'Failed to load data: $e';
+        isLoading = false;
+      });
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    return "${date.month}/${date.day}/${date.year}";
+  }
 
   @override
   Widget build(BuildContext context) {
-    print('PatientFoldersScreen loaded with patientId: $patientId');
-
-    if (patientId.isEmpty) {
+    if (isLoading) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Patient Folders')),
-        body: const Center(child: Text('No patient ID provided.')),
+        appBar: AppBar(
+          title: const Text('Patient Folders'),
+          backgroundColor: const Color.fromARGB(255, 0, 121, 107),
+        ),
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
+    if (error != null) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Patient Folders'),
+          backgroundColor: const Color.fromARGB(255, 0, 121, 107),
+        ),
+        body: Center(child: Text(error!)),
+      );
+    }
+
+    if (patientData == null) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Patient Folders'),
+          backgroundColor: const Color.fromARGB(255, 0, 121, 107),
+        ),
+        body: const Center(child: Text('No patient data found.')),
+      );
+    }
+
+    if (dataByDate.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Patient Folders'),
+          backgroundColor: const Color.fromARGB(255, 0, 121, 107),
+        ),
+        body: const Center(child: Text('No history found for this patient.')),
+      );
+    }
+
+    // Sort dates descending
+    final dates = dataByDate.keys.toList()
+      ..sort((a, b) => b.compareTo(a));
+
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color.fromARGB(255, 0, 121, 107), 
-        foregroundColor: Colors.white,   
-        title: const Text('Patient Folders')
+        title: const Text('Patient Folders'),
+        backgroundColor: const Color.fromARGB(255, 0, 121, 107),
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('folders')
-            .where('patientId', isEqualTo: patientId)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            print('Error in folders stream: ${snapshot.error}');
-            return const Center(child: Text('Error loading folders.'));
-          }
+      body: ListView.builder(
+        itemCount: dates.length,
+        itemBuilder: (context, index) {
+          final date = dates[index];
+          final dayData = dataByDate[date]!;
 
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
+          // Check which subcollections are available on this date
+          final availableCollections = dayData.keys.toList();
 
-          final folders = snapshot.data!.docs;
-          print('Found ${folders.length} folders for patientId: $patientId');
-
-          if (folders.isEmpty) {
-            return const Center(child: Text('No folders found.'));
-          }
-
-          return ListView.builder(
-            itemCount: folders.length,
-            itemBuilder: (context, index) {
-              final folderDoc = folders[index];
-              final folderData = folderDoc.data()! as Map<String, dynamic>;
-              print('Folder data: $folderData');
-
-              return ListTile(
-                leading: (folderData['photo_url'] != null && folderData['photo_url'].toString().isNotEmpty)
-                    ? Image.network(
-                        folderData['photo_url'],
-                        width: 50,
-                        height: 50,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) =>
-                            const Icon(Icons.broken_image),
-                      )
-                    : const Icon(Icons.image_not_supported),
-                title: Text(folderData['date'] ?? 'No date'),
-                subtitle: Text('Classification: ${folderData['classification'] ?? 'N/A'}'),
-                trailing: Text(folderData['status'] ?? ''),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => EntryDetailScreen(
-                        folder: folderData,    
-                        docId: folderDoc.id,  
-                        collectionName: 'pending_approvals',
-                        readonly: true,       
-                      ),
-                    ),
-                  );
-                },
+          return ListTile(
+            leading: const Icon(Icons.folder),
+            title: Text(_formatDate(date)),
+            subtitle: Text('Data: ${availableCollections.join(', ')}'),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => PatientHistoryScreen(
+                    folder: patientData!,
+                    docId: widget.patientId,
+                    collectionName: 'users',
+                    selectedDate: date,
+                    readonly: false,
+                   
+                  ),
+                ),
               );
             },
           );

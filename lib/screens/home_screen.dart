@@ -167,7 +167,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       )
                     : null,
                 onTap: () {
-                  // Navigate or show details if needed
+                   Navigator.pushNamed(
+                    context,
+                    '/folders',
+                    arguments: patient.id,
+                  );
                 },
               ),
             );

@@ -109,34 +109,42 @@ class EdentifyApp extends StatelessWidget {
               builder: (_) => PatientFoldersScreen(patientId: patientId),
             );
 
-          case '/entryDetail':
-            final args = settings.arguments;
-            if (args == null || args is! Map<String, dynamic>) {
-              return MaterialPageRoute(
-                builder: (_) => const Scaffold(
-                  body: Center(
-                    child: Text('Invalid data passed to EntryDetailScreen'),
-                  ),
-                ),
-              );
-            }
-            final folder = args['folder'] as Map<String, dynamic>?;
-            final docId = args['docId'] as String?;
-            if (folder == null || docId == null) {
-              return MaterialPageRoute(
-                builder: (_) => const Scaffold(
-                  body: Center(child: Text('Missing folder or docId')),
-                ),
-              );
-            }
+          case '/patientHistory':
+          final args = settings.arguments;
+          if (args == null || args is! Map<String, dynamic>) {
             return MaterialPageRoute(
-              builder: (_) => PatientHistoryScreen(
-                folder: folder,
-                docId: docId,
-                collectionName: 'pending_approvals',
+              builder: (_) => const Scaffold(
+                body: Center(
+                  child: Text('Invalid data passed to PatientHistoryScreen'),
+                ),
               ),
             );
+          }
 
+          final folder = args['folder'] as Map<String, dynamic>?;
+          final docId = args['docId'] as String?;
+          final collectionName = args['collectionName'] as String? ?? 'users';
+          final readonly = args['readonly'] as bool? ?? false;
+          final selectedDate = args['selectedDate'] as DateTime?;
+
+          if (folder == null || docId == null || selectedDate == null) {
+            return MaterialPageRoute(
+              builder: (_) => const Scaffold(
+                body: Center(child: Text('Missing folder, docId or selectedDate')),
+              ),
+            );
+          }
+
+          return MaterialPageRoute(
+            builder: (_) => PatientHistoryScreen(
+              folder: folder,
+              docId: docId,
+              collectionName: collectionName,
+              selectedDate: selectedDate,
+              readonly: readonly,
+            ),
+          );
+          
           case '/archivedPatients':
             final centerName = settings.arguments as String?;
             if (centerName == null || centerName.isEmpty) {
