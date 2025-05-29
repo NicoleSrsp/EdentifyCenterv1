@@ -26,6 +26,7 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> {
   late TextEditingController _noteController;
 
   String patientName = 'Loading...';
+  String healthCondition = '';
   bool isLoading = false;
   bool isApproved = false;
 
@@ -52,18 +53,29 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> {
     final doc = await FirebaseFirestore.instance
         .collection(widget.collectionName)
         .doc(widget.docId)
-        .get();
+        .get()
+        ;
 
-    final data = doc.data();
+     final data = doc.data();
     if (data != null) {
       final first = data['firstName'] ?? '';
       final last = data['lastName'] ?? '';
-      setState(() => patientName = '${first.trim()} ${last.trim()}'.trim());
+      final condition = data['healthCondition'] ?? '';
+      setState(() {
+        patientName = '${first.trim()} ${last.trim()}'.trim();
+        healthCondition = condition;
+      });
     } else {
-      setState(() => patientName = 'Unknown');
+      setState(() {
+        patientName = 'Unknown';
+        healthCondition = '';
+      });
     }
   } catch (e) {
-    setState(() => patientName = 'Unknown');
+    setState(() {
+      patientName = 'Unknown';
+      healthCondition = '';
+    });
   }
 }
 
@@ -132,8 +144,8 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> {
     }
   }
 
-  Widget buildScanSection() {
-     return StreamBuilder<QuerySnapshot>(
+ Widget buildScanSection() {
+  return StreamBuilder<QuerySnapshot>(
     stream: _getSubcollectionStream('scanHistory'),
     builder: (context, snapshot) {
       if (snapshot.hasError) return const Text('Error loading scans.');
@@ -150,173 +162,172 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> {
       _noteController.text = data['doctor_note'] ?? '';
 
       return LayoutBuilder(
-      builder: (context, constraints) {
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Left: Photo + texts
-            ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: photoUrl != null && photoUrl.isNotEmpty
-                  ? SizedBox(
-                      width: 300,
-                      height: 300,
-                      child: Image.network(
-                        photoUrl,
-                        fit: BoxFit.contain,
-                        alignment: Alignment.center,
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) return child;
-                          return Container(
-                            color: Colors.grey[200],
-                            child: const Center(child: CircularProgressIndicator()),
-                          );
-                        },
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            color: Colors.grey[200],
-                            child: const Center(
-                              child: Icon(Icons.broken_image, size: 80, color: Colors.grey),
-                            ),
-                          );
-                        },
-                      ),
-                    )
-                  : Container(
-                      width: 300,
-                      height: 300,
-                      color: Colors.grey[300],
-                      child: const Icon(Icons.image, size: 80, color: Colors.grey),
-                    ),
-            ),
-
-            const SizedBox(width: 16),
-
-            // Wrap the text widgets inside a Column
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Classification text
-                Text(
-                  result,
-                  style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.black87),
-                ),
-                const SizedBox(height: 16),
-
-                // Recommendations title
-                const Text(
-                  'Recommendations:',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 8),
-
-                // Recommendations list
-                ...recommendations
-                    .toString()
-                    .split('.')
-                    .where((rec) => rec.trim().isNotEmpty)
-                    .map(
-                      (rec) => Padding(
-                        padding: const EdgeInsets.only(bottom: 4),
-                        child: Text(
-                          '• ${rec.trim()}.',
-                          style: const TextStyle(fontSize: 16, color: Colors.black87),
-                        ),
-                      ),
-                    ),
-                const SizedBox(height: 24),
-              ],
-            ),
-
-            const SizedBox(width: 24),
-
-            // Right side remains unchanged...
-            Expanded(
-              child: Column(
+        builder: (context, constraints) {
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // LEFT SIDE: Image + result + recommendations + buttons
+              Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  TextField(
-                    controller: _noteController,
-                    maxLines: 5,
-                    readOnly: widget.readonly,
-                    decoration: InputDecoration(
-                      hintText: "Doctor's notes",
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      fillColor: Colors.grey[100],
-                      filled: true,
-                    ),
-                    style: const TextStyle(fontSize: 16),
+                  // Image
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: photoUrl != null && photoUrl.isNotEmpty
+                        ? SizedBox(
+                            width: 300,
+                            height: 300,
+                            child: Image.network(
+                              photoUrl,
+                              fit: BoxFit.contain,
+                              alignment: Alignment.center,
+                              loadingBuilder: (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return Container(
+                                  color: Colors.grey[200],
+                                  child: const Center(child: CircularProgressIndicator()),
+                                );
+                              },
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  color: Colors.grey[200],
+                                  child: const Center(
+                                    child: Icon(Icons.broken_image, size: 80, color: Colors.grey),
+                                  ),
+                                );
+                              },
+                            ),
+                          )
+                        : Container(
+                            width: 300,
+                            height: 300,
+                            color: Colors.grey[300],
+                            child: const Icon(Icons.image, size: 80, color: Colors.grey),
+                          ),
                   ),
+                  const SizedBox(height: 16),
+
+                  // Result
+                  Text(
+                    result,
+                    style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.black87),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Recommendations
+                  const Text(
+                    'Recommendations:',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 8),
+                  ...recommendations
+                      .toString()
+                      .split('.')
+                      .where((rec) => rec.trim().isNotEmpty)
+                      .map(
+                        (rec) => Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Text(
+                            '• ${rec.trim()}.',
+                            style: const TextStyle(fontSize: 16, color: Colors.black87),
+                          ),
+                        ),
+                      ),
 
                   const SizedBox(height: 24),
 
+                  // Buttons
                   if (!widget.readonly)
                     Row(
                       children: [
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: isApproved ? null : approveEntry,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: isApproved ? Colors.grey : Colors.green,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            ),
-                            child: isLoading
-                                ? const SizedBox(
-                                    height: 20,
-                                    width: 20,
-                                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                                  )
-                                : Text(isApproved ? 'Approved' : 'Approve', style: const TextStyle(fontSize: 18)),
+                        ElevatedButton(
+                          onPressed: isApproved ? null : approveEntry,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: isApproved ? Colors.grey : Colors.green,
+                            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
+                          child: isLoading
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                )
+                              : Text(isApproved ? 'Approved' : 'Approve', style: const TextStyle(fontSize: 18)),
                         ),
                         const SizedBox(width: 16),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Reclassification feature coming soon.')),
-                              );
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.orange,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            ),
-                            child: const Text('Reclassify', style: TextStyle(fontSize: 18)),
+                        ElevatedButton(
+                          onPressed: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Reclassification feature coming soon.')),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orange,
+                            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
+                          child: const Text('Reclassify', style: TextStyle(fontSize: 18)),
                         ),
                       ],
                     ),
-
-                  if (!widget.readonly) const SizedBox(height: 16),
-
-                  if (!widget.readonly)
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: updateDoctorNote,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        child: const Text('Save Note', style: TextStyle(fontSize: 18)),
-                      ),
-                    ),
                 ],
               ),
-            ),
-          ],
-        );
-      },
-    );
 
+              const SizedBox(width: 32),
 
+              // RIGHT SIDE: Doctor's note
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                    "Doctor's Note",
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                    TextField(
+                      controller: _noteController,
+                      maxLines: 5,
+                      readOnly: widget.readonly,
+                      decoration: InputDecoration(
+                        hintText: "Doctor's notes",
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        fillColor: Colors.grey[100],
+                        filled: true,
+                      ),
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                    const SizedBox(height: 16),
 
+                    if (!widget.readonly)
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: updateDoctorNote,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: const Text('Save Note', style: TextStyle(fontSize: 18)),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
+      );
     },
   );
 }
+
+
 
   Widget buildTreatmentSection() {
     return StreamBuilder<QuerySnapshot>(
@@ -385,37 +396,65 @@ Widget build(BuildContext context) {
   return Scaffold(
     backgroundColor: Colors.grey[50],
     appBar: AppBar(
-      backgroundColor: const Color(0xFF00A79D),
-      title: Row(
-        children: [
-          Image.asset('assets/logo.png', height: 40),
-          const SizedBox(width: 10),
-          const Text('Edentify'),
-          const Spacer(),
-          IconButton(onPressed: () {}, icon: const Icon(Icons.home)),
-          IconButton(onPressed: () {}, icon: const Icon(Icons.logout)),
-        ],
+    backgroundColor: const Color(0xFF00A79D),
+    iconTheme: const IconThemeData(color: Colors.white), // back arrow white
+    title: Row(
+      children: [
+        Image.asset('assets/logo.png', height: 40),
+        const SizedBox(width: 10),
+        const Text(
+          'Edentify',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        const Spacer(),
+        IconButton(
+          onPressed: () {},
+          icon: const Icon(Icons.home, color: Colors.white),  // home icon white
+        ),
+        IconButton(
+        onPressed: () {
+          Navigator.pushNamed(context, '/login', arguments: {
+            'centerName': ['doctorName'],
+            'doctorName': ['doctorName'],
+          });
+        },
+        icon: const Icon(Icons.logout, color: Colors.white),
       ),
+      ],
     ),
+  ),
     body: SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Patient name header card
-          Card(
-            elevation: 3,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            margin: EdgeInsets.zero,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                'Patient: $patientName',
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-              ),
+        Card(
+          elevation: 3,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: EdgeInsets.zero,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Patient: $patientName',
+                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8), // space between texts
+                Text(
+                  'Condition: $healthCondition',
+                  style: const TextStyle(fontSize: 16, color: Colors.grey),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 24),
+        ),
+        const SizedBox(height: 24),
+        const SizedBox(height: 4),
+
+          
 
           // Scan Section Card
           Card(

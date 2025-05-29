@@ -98,9 +98,13 @@ class _PatientFoldersScreenState extends State<PatientFoldersScreen> {
     if (isLoading) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text('Patient Folders'),
-          backgroundColor: const Color.fromARGB(255, 0, 121, 107),
+        title: const Text(
+          'Patient Folders',
+          style: TextStyle(color: Colors.white), // Title text color
         ),
+        iconTheme: const IconThemeData(color: Colors.white), // Back arrow color
+        backgroundColor: const Color.fromARGB(255, 0, 121, 107),
+      ),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
@@ -108,19 +112,27 @@ class _PatientFoldersScreenState extends State<PatientFoldersScreen> {
     if (error != null) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text('Patient Folders'),
-          backgroundColor: const Color.fromARGB(255, 0, 121, 107),
+           title: const Text(
+          'Patient Folders',
+          style: TextStyle(color: Colors.white), // Title text color
         ),
-        body: Center(child: Text(error!)),
+        iconTheme: const IconThemeData(color: Colors.white), // Back arrow color
+        backgroundColor: const Color.fromARGB(255, 0, 121, 107),
+      ),
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     if (patientData == null) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text('Patient Folders'),
-          backgroundColor: const Color.fromARGB(255, 0, 121, 107),
+           title: const Text(
+          'Patient Folders',
+          style: TextStyle(color: Colors.white), // Title text color
         ),
+        iconTheme: const IconThemeData(color: Colors.white), // Back arrow color
+        backgroundColor: const Color.fromARGB(255, 0, 121, 107),
+      ),
         body: const Center(child: Text('No patient data found.')),
       );
     }
@@ -128,9 +140,13 @@ class _PatientFoldersScreenState extends State<PatientFoldersScreen> {
     if (dataByDate.isEmpty) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text('Patient Folders'),
-          backgroundColor: const Color.fromARGB(255, 0, 121, 107),
+           title: const Text(
+          'Patient Folders',
+          style: TextStyle(color: Colors.white), // Title text color
         ),
+        iconTheme: const IconThemeData(color: Colors.white), // Back arrow color
+        backgroundColor: const Color.fromARGB(255, 0, 121, 107),
+      ),
         body: const Center(child: Text('No history found for this patient.')),
       );
     }
@@ -140,8 +156,12 @@ class _PatientFoldersScreenState extends State<PatientFoldersScreen> {
       ..sort((a, b) => b.compareTo(a));
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Patient Folders'),
+       appBar: AppBar(
+           title: const Text(
+          'Patient Folders',
+          style: TextStyle(color: Colors.white), // Title text color
+        ),
+        iconTheme: const IconThemeData(color: Colors.white), // Back arrow color
         backgroundColor: const Color.fromARGB(255, 0, 121, 107),
       ),
       body: ListView.builder(
@@ -154,25 +174,23 @@ class _PatientFoldersScreenState extends State<PatientFoldersScreen> {
           final availableCollections = dayData.keys.toList();
 
           return ListTile(
-            leading: const Icon(Icons.folder),
-            title: Text(_formatDate(date)),
-            subtitle: Text('Data: ${availableCollections.join(', ')}'),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => PatientHistoryScreen(
-                    folder: patientData!,
-                    docId: widget.patientId,
-                    collectionName: 'users',
-                    selectedDate: date,
-                    readonly: false,
-                   
-                  ),
+          leading: const Icon(Icons.folder),
+          title: Text(_formatDate(date)),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => PatientHistoryScreen(
+                  folder: patientData!,
+                  docId: widget.patientId,
+                  collectionName: 'users',
+                  selectedDate: date,
+                  readonly: false,
                 ),
-              );
-            },
-          );
+              ),
+            );
+          },
+        );
         },
       ),
     );

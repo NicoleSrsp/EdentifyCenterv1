@@ -88,6 +88,22 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
         var docs = snapshot.data!.docs;
 
+        // Optional: filter by search first
+        if (_searchText.isNotEmpty) {
+          docs = docs.where((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            final fullName = _getFullName(data).toLowerCase();
+            return fullName.contains(_searchText);
+          }).toList();
+        }
+
+        // 🔠 Sort alphabetically by full name
+        docs.sort((a, b) {
+          final nameA = _getFullName(a.data() as Map<String, dynamic>).toLowerCase();
+          final nameB = _getFullName(b.data() as Map<String, dynamic>).toLowerCase();
+          return nameA.compareTo(nameB);
+        });
+
         if (_searchText.isNotEmpty) {
           docs = docs.where((doc) {
             final data = doc.data() as Map<String, dynamic>;
@@ -106,7 +122,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             final patient = docs[index];
             final data = patient.data() as Map<String, dynamic>;
             final fullName = _getFullName(data);
-            final healthCondition = data['healthCondition'] ?? 'N/A';
             final birthday = data['birthday'] ?? 'Unknown';
 
             return Card(
@@ -123,11 +138,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ),
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Health Condition: $healthCondition',
-                      style: const TextStyle(color: Colors.white70),
-                    ),
+                  children:[
                     Text(
                       'Birthday: $birthday',
                       style: const TextStyle(color: Colors.white70),
@@ -329,6 +340,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         backgroundColor: Colors.teal.shade700,
         title: Row(
           children: [
@@ -343,6 +355,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         bottom: TabBar(
           controller: _tabController,
           labelColor: Colors.white,
+          unselectedLabelColor: const Color.fromARGB(255, 115, 193, 184),
           indicatorColor: Colors.white,
           tabs: const [
             Tab(text: 'Patients'),
@@ -352,13 +365,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.notifications),
+            icon: const Icon(Icons.notifications, color: Colors.white),
             onPressed: () {
               // TODO: Implement notifications logic
             },
           ),
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: const Icon(Icons.logout, color: Colors.white),
             onPressed: () {
               // TODO: Implement logout logic
             },
