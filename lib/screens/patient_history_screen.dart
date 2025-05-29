@@ -143,7 +143,7 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> with Ticker
         final classification = data['result'] ?? 'No classification available yet';
         final recommendation = data['recommendations'] ?? 'No recommendations yet';
         final confidence = int.tryParse(data['confidence_score']?.toString() ?? '0') ?? 0;
-        final photoUrl = data['imageURL'];
+        final photoUrl = data['imageURL']?.toString() ?? '';
         final scanDate = (data['timestamp'] as Timestamp?)?.toDate().toLocal().toString() ?? 'No scan date available';
 
         if (!widget.readonly) {
@@ -155,15 +155,38 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> with Ticker
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (photoUrl != null && photoUrl.isNotEmpty)
-                Image.network(
-                  photoUrl,
-                  height: 160,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, size: 160),
+              if (photoUrl.isNotEmpty)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(
+                    photoUrl,
+                    height: 160,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return SizedBox(
+                        height: 160,
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            value: loadingProgress.expectedTotalBytes != null
+                                ? loadingProgress.cumulativeBytesLoaded / (loadingProgress.expectedTotalBytes ?? 1)
+                                : null,
+                          ),
+                        ),
+                      );
+                    },
+                    errorBuilder: (context, error, stackTrace) => const SizedBox(
+                      height: 160,
+                      child: Center(child: Icon(Icons.broken_image, size: 64)),
+                    ),
+                  ),
                 )
               else
-                const Icon(Icons.image, size: 160),
+                const SizedBox(
+                  height: 160,
+                  child: Center(child: Icon(Icons.image, size: 64)),
+                ),
               const SizedBox(height: 10),
               Text(classification, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
@@ -275,12 +298,6 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> with Ticker
 
         final docs = snapshot.data?.docs ?? [];
 
-        // Debug prints for verifying data retrieval
-        print('Water intake docs count: ${docs.length}');
-        for (var doc in docs) {
-          print('Water intake doc data: ${doc.data()}');
-        }
-
         if (docs.isEmpty) return const Center(child: Text('No water intake records for this date.'));
 
         return ListView(
@@ -291,12 +308,19 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> with Ticker
             final timestamp = (data['timestamp'] as Timestamp?)?.toDate().toLocal().toString() ?? '';
             final amount = data['intakeAmount'] ?? 0;
             final totalAmount = data['totalAmount'] ?? 0;
-            final waterLossCauses = (data['waterLossCauses'] as List<dynamic>?)?.join(', ') ?? 'None';
+            final waterLossCauses = (data['waterLossCauses'] as List<dynamic>?)?.cast<String>() ?? [];
 
             return Card(
               child: ListTile(
-                title: Text('Intake Amount: $amount'),
-                subtitle: Text('Total Amount: $totalAmount\nLoss Causes: $waterLossCauses\nDate: $dateStr'),
+                title: Text('Date: $dateStr'),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Amount: $amount ml'),
+                    Text('Total Amount: $totalAmount ml'),
+                    Text('Water Loss Causes: ${waterLossCauses.join(', ')}'),
+                  ],
+                ),
                 trailing: Text(timestamp.split(' ').first),
               ),
             );
@@ -314,8 +338,8 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> with Ticker
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
-            Tab(text: 'Scans'),
-            Tab(text: 'Treatments'),
+            Tab(text: 'Scan'),
+            Tab(text: 'Treatment'),
             Tab(text: 'Water Intake'),
           ],
         ),
