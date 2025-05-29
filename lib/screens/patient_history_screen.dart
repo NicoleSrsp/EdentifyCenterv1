@@ -81,12 +81,21 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> {
 
   Future<void> fetchApprovalStatus() async {
     try {
-      final doc = await FirebaseFirestore.instance
-          .collection('pending_approvals')
+      final query = await FirebaseFirestore.instance
+          .collection(widget.collectionName)
           .doc(widget.docId)
+          .collection('scanHistory')
+          .where('timestamp',
+              isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDayUtc))
+          .where('timestamp', isLessThan: Timestamp.fromDate(endOfDayUtc))
+          .limit(1)
           .get();
-      if (doc.exists) {
-        setState(() => isApproved = (doc.data()?['status'] == 'approved'));
+
+      if (query.docs.isNotEmpty) {
+        final data = query.docs.first.data();
+        setState(() {
+          isApproved = data['approved'] == true;
+        });
       }
     } catch (_) {
       setState(() => isApproved = false);
@@ -132,53 +141,43 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> {
   }
 
   Future<void> approveEntry() async {
-  setState(() => isLoading = true);
+    setState(() => isLoading = true);
+    try {
+      final query = await FirebaseFirestore.instance
+          .collection(widget.collectionName)
+          .doc(widget.docId)
+          .collection('scanHistory')
+          .where('timestamp',
+              isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDayUtc))
+          .where('timestamp', isLessThan: Timestamp.fromDate(endOfDayUtc))
+          .limit(1)
+          .get();
 
-  try {
-    final query = await FirebaseFirestore.instance
-        .collection(widget.collectionName)
-        .doc(widget.docId)
-        .collection('scanHistory')
-        .where('timestamp',
-            isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDayUtc))
-        .where('timestamp', isLessThan: Timestamp.fromDate(endOfDayUtc))
-        .limit(1)
-        .get();
-
-    if (query.docs.isNotEmpty) {
-      final docRef = query.docs.first.reference;
-
-      await docRef.update({
-        'approved': true,
-        'approved_at': FieldValue.serverTimestamp(),
-      });
-
-      setState(() => isApproved = true);
-
+      if (query.docs.isNotEmpty) {
+        await query.docs.first.reference.update({
+          'approved': true,
+          'approved_at': FieldValue.serverTimestamp(),
+        });
+        setState(() => isApproved = true);
+        if (mounted) {
+          ScaffoldMessenger.of(context)
+              .showSnackBar(const SnackBar(content: Text('Entry approved.')));
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('No entry found to approve.')));
+        }
+      }
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Entry approved.')),
-        );
+            SnackBar(content: Text('Failed to approve entry: $e')));
       }
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No entry found to approve.')),
-        );
-      }
+    } finally {
+      setState(() => isLoading = false);
     }
-  } catch (e) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to approve entry: $e')),
-      );
-    }
-  } finally {
-    setState(() => isLoading = false);
   }
-}
-
-
 
   Widget buildScanSection() {
     return StreamBuilder<QuerySnapshot>(
@@ -198,6 +197,13 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> {
         final recommendations =
             data['recommendations'] ?? 'No recommendations available';
         _noteController.text = data['doctor_note'] ?? '';
+
+        // Update approval status from the stream data
+        if (data['approved'] == true && !isApproved) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            setState(() => isApproved = true);
+          });
+        }
 
         return Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -312,21 +318,23 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> {
                           onPressed: isLoading
                               ? null
                               : () async {
-                                  final now = DateTime.now();
-                                  final startOfDay =
-                                      DateTime(now.year, now.month, now.day);
-                                  final endOfDay =
-                                      startOfDay.add(const Duration(days: 1));
+                                  // Use the selected date from widget
+                                  final startOfDay = DateTime.utc(
+                                    widget.selectedDate.year,
+                                    widget.selectedDate.month,
+                                    widget.selectedDate.day,
+                                  );
+                                  final endOfDay = startOfDay.add(const Duration(days: 1));
 
                                   final querySnapshot = await FirebaseFirestore
                                       .instance
                                       .collection(widget.collectionName)
                                       .doc(widget.docId)
                                       .collection('scanHistory')
-                                      .where('date',
+                                      .where('timestamp',
                                           isGreaterThanOrEqualTo:
                                               Timestamp.fromDate(startOfDay))
-                                      .where('date',
+                                      .where('timestamp',
                                           isLessThan:
                                               Timestamp.fromDate(endOfDay))
                                       .limit(1)
@@ -344,7 +352,7 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> {
                                           .showSnackBar(
                                         const SnackBar(
                                             content: Text(
-                                                'No scan history available for today to reclassify.')),
+                                                'No scan history available for this date to reclassify.')),
                                       );
                                     }
                                   }
@@ -615,103 +623,66 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> {
   }
 
   Future<void> showReclassificationDialog(
-      String scanDocId, String currentClassification) async {
-    String? selectedClassification = currentClassification.toLowerCase();
-
-    final classifications = ['normal', 'mild', 'moderate', 'severe'];
+      String docId, String currentClassification) async {
+    final classifications = ['Normal', 'Mild', 'Moderate', 'Severe'];
+    String? selected = currentClassification;
 
     await showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text('Reclassify Condition'),
-          content: StatefulBuilder(
-            builder: (context, setState) {
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                children: classifications.map((cls) {
-                  return RadioListTile<String>(
-                    title: Text(cls[0].toUpperCase() + cls.substring(1)),
-                    value: cls,
-                    groupValue: selectedClassification,
-                    onChanged: (value) {
-                      setState(() {
-                        selectedClassification = value;
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Reclassify Result'),
+              content: DropdownButton<String>(
+                value: selected,
+                items: classifications
+                    .map((e) => DropdownMenuItem(
+                          value: e,
+                          child: Text(e),
+                        ))
+                    .toList(),
+                onChanged: (value) {
+                  setState(() {
+                    selected = value;
+                  });
+                },
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    if (selected != null) {
+                      await FirebaseFirestore.instance
+                          .collection(widget.collectionName)
+                          .doc(widget.docId)
+                          .collection('scanHistory')
+                          .doc(docId)
+                          .update({
+                        'result': selected,
+                        'reclassified': true,
+                        'reclassifiedAt': Timestamp.now(),
+                        'reclassifiedBy': 'doctor',
                       });
-                    },
-                  );
-                }).toList(),
-              );
-            },
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: selectedClassification == null
-                  ? null
-                  : () async {
+
                       Navigator.pop(context);
-                      await updateReclassification(
-                          scanDocId, selectedClassification!);
-                    },
-              child: const Text('Save'),
-            ),
-          ],
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Reclassified as $selected')),
+                        );
+                      }
+                    }
+                  },
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
-  }
-
-  Future<void> updateReclassification(
-      String scanDocId, String newClassification) async {
-    setState(() => isLoading = true);
-
-    try {
-      final scanDocRef = FirebaseFirestore.instance
-          .collection(widget.collectionName)
-          .doc(widget.docId)
-          .collection('scanHistory')
-          .doc(scanDocId);
-
-      await scanDocRef.update({
-        'result': newClassification[0].toUpperCase() + newClassification.substring(1),
-        'reclassified_at': FieldValue.serverTimestamp(),
-        'reclassified_by': 'Doctor',
-      });
-
-      // Add notification for patient
-      final notificationRef = FirebaseFirestore.instance
-          .collection(widget.collectionName)
-          .doc(widget.docId)
-          .collection('notifications')
-          .doc();
-
-      await notificationRef.set({
-        'type': 'reclassification',
-        'message':
-            'Your scan classification has been updated to $newClassification.',
-        'timestamp': FieldValue.serverTimestamp(),
-        'read': false,
-      });
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(
-                  'Classification updated to $newClassification and patient notified.')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update classification: $e')),
-        );
-      }
-    } finally {
-      setState(() => isLoading = false);
-    }
   }
 }
