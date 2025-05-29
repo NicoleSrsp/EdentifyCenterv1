@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class PatientHistoryScreen extends StatefulWidget {
-  final Map<String, dynamic> folder;
-  final String docId;
+  final Map<String, dynamic> folder; // patient data document fields only
+  final String docId;                // patient document ID (patient ID)
   final bool readonly;
-  final String collectionName;
+  final String collectionName;       // Usually 'users'
   final DateTime selectedDate;
 
   const PatientHistoryScreen({
@@ -13,7 +13,7 @@ class PatientHistoryScreen extends StatefulWidget {
     required this.folder,
     required this.docId,
     this.readonly = false,
-    required this.collectionName,
+    this.collectionName = 'users',  // default to 'users'
     required this.selectedDate,
   });
 
@@ -29,7 +29,8 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> with Ticker
   bool isLoading = false;
   bool isApproved = false;
 
-  String get dateKey => widget.selectedDate.toIso8601String().split('T').first;
+  DateTime get startOfDayUtc => DateTime.utc(widget.selectedDate.year, widget.selectedDate.month, widget.selectedDate.day);
+  DateTime get endOfDayUtc => startOfDayUtc.add(const Duration(days: 1));
 
   @override
   void initState() {
@@ -48,15 +49,17 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> with Ticker
   }
 
   Future<void> fetchPatientName() async {
-    final patientId = widget.folder['patientId'] as String?;
-    if (patientId == null) {
-      setState(() => patientName = 'Patient ID not found');
-      return;
-    }
     try {
-      final doc = await FirebaseFirestore.instance.collection(widget.collectionName).doc(patientId).get();
-      setState(() => patientName = doc.data()?['name'] ?? 'Unknown');
-    } catch (_) {
+      final doc = await FirebaseFirestore.instance.collection(widget.collectionName).doc(widget.docId).get();
+      final data = doc.data();
+      if (data != null) {
+        final first = data['firstname'] ?? '';
+        final last = data['lastname'] ?? '';
+        setState(() => patientName = '$first $last'.trim());
+      } else {
+        setState(() => patientName = 'Unknown');
+      }
+    } catch (e) {
       setState(() => patientName = 'Unknown');
     }
   }
@@ -65,9 +68,7 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> with Ticker
     try {
       final doc = await FirebaseFirestore.instance.collection('pending_approvals').doc(widget.docId).get();
       if (doc.exists) {
-        setState(() {
-          isApproved = (doc.data()?['status'] == 'approved');
-        });
+        setState(() => isApproved = (doc.data()?['status'] == 'approved'));
       }
     } catch (_) {
       setState(() => isApproved = false);
@@ -75,44 +76,35 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> with Ticker
   }
 
   Stream<QuerySnapshot> _getSubcollectionStream(String subcollection) {
-    final patientId = widget.folder['patientId'] as String?;
-    if (patientId == null) return const Stream.empty();
-
-    final ref = FirebaseFirestore.instance
+    return FirebaseFirestore.instance
         .collection(widget.collectionName)
-        .doc(patientId)
-        .collection(subcollection);
-
-    if (subcollection == 'waterIntake') {
-      final start = DateTime(widget.selectedDate.year, widget.selectedDate.month, widget.selectedDate.day);
-      final end = start.add(const Duration(days: 1));
-      return ref
-          .where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
-          .where('timestamp', isLessThan: Timestamp.fromDate(end))
-          .snapshots();
-    } else {
-      return ref.where('date', isEqualTo: dateKey).snapshots();
-    }
+        .doc(widget.docId)
+        .collection(subcollection)
+        .where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDayUtc))
+        .where('timestamp', isLessThan: Timestamp.fromDate(endOfDayUtc))
+        .snapshots();
   }
 
   Future<void> updateDoctorNote() async {
-    final patientId = widget.folder['patientId'] as String?;
-    if (patientId == null) return;
-
     try {
       final query = await FirebaseFirestore.instance
           .collection(widget.collectionName)
-          .doc(patientId)
+          .doc(widget.docId)
           .collection('scanHistory')
-          .where('date', isEqualTo: dateKey)
+          .where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDayUtc))
+          .where('timestamp', isLessThan: Timestamp.fromDate(endOfDayUtc))
           .get();
 
       if (query.docs.isNotEmpty) {
         await query.docs.first.reference.update({'doctor_note': _noteController.text});
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Doctor's note updated.")));
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Doctor's note updated.")));
+        }
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to update note: $e")));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to update note: $e")));
+      }
     }
   }
 
@@ -124,9 +116,13 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> with Ticker
         'approved_at': FieldValue.serverTimestamp(),
       });
       setState(() => isApproved = true);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Entry approved.')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Entry approved.')));
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to approve entry: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to approve entry: $e')));
+      }
     } finally {
       setState(() => isLoading = false);
     }
@@ -142,14 +138,17 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> with Ticker
         final docs = snapshot.data?.docs ?? [];
         if (docs.isEmpty) return const Center(child: Text('No scan records for this date.'));
 
-        final data = docs.first.data() as Map<String, dynamic>;
+        final data = docs.first.data()! as Map<String, dynamic>;
+
         final classification = data['result'] ?? 'No classification available yet';
         final recommendation = data['recommendations'] ?? 'No recommendations yet';
         final confidence = int.tryParse(data['confidence_score']?.toString() ?? '0') ?? 0;
         final photoUrl = data['imageURL'];
-        final scanDate = data['dateKey'] ?? 'No scan date available';
+        final scanDate = (data['timestamp'] as Timestamp?)?.toDate().toLocal().toString() ?? 'No scan date available';
 
-        _noteController.text = data['doctor_note'] ?? '';
+        if (!widget.readonly) {
+          _noteController.text = data['doctor_note'] ?? '';
+        }
 
         return SingleChildScrollView(
           padding: const EdgeInsets.all(16),
@@ -244,19 +243,24 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> with Ticker
         final docs = snapshot.data?.docs ?? [];
         if (docs.isEmpty) return const Center(child: Text('No treatment records for this date.'));
 
-        final data = docs.first.data() as Map<String, dynamic>;
-
-        return Padding(
+        return ListView(
           padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text("Pre Weight: ${data['preWeight']?.toString() ?? 'No data'}"),
-              Text("Post Weight: ${data['postWeight']?.toString() ?? 'No data'}"),
-              Text("UF Volume: ${data['ufVolume']?.toString() ?? 'No data'}"),
-              Text("Dialysis Date: ${data['dialysisDate']?.toString() ?? 'No data'}"),
-            ],
-          ),
+          children: docs.map((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            final dialysisDate = data['dialysisDate'] ?? 'N/A';
+            final preWeight = data['preWeight']?.toString() ?? 'N/A';
+            final postWeight = data['postWeight']?.toString() ?? 'N/A';
+            final ufVolume = data['ufVolume']?.toString() ?? 'N/A';
+            final timestamp = (data['timestamp'] as Timestamp?)?.toDate().toLocal().toString() ?? '';
+
+            return Card(
+              child: ListTile(
+                title: Text('Dialysis Date: $dialysisDate'),
+                subtitle: Text('Pre Weight: $preWeight\nPost Weight: $postWeight\nUF Volume: $ufVolume'),
+                trailing: Text(timestamp.split(' ').first),
+              ),
+            );
+          }).toList(),
         );
       },
     );
@@ -270,20 +274,33 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> with Ticker
         if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
 
         final docs = snapshot.data?.docs ?? [];
+
+        // Debug prints for verifying data retrieval
+        print('Water intake docs count: ${docs.length}');
+        for (var doc in docs) {
+          print('Water intake doc data: ${doc.data()}');
+        }
+
         if (docs.isEmpty) return const Center(child: Text('No water intake records for this date.'));
 
-        final data = docs.first.data() as Map<String, dynamic>;
-
-        return Padding(
+        return ListView(
           padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text("Intake Amount: ${data['intakeAmount']?.toString() ?? 'No data'}"),
-              Text("Water Loss Causes: ${(data['waterLossCauses'] as List<dynamic>?)?.join(', ') ?? 'None'}"),
-              Text("Time Recorded: ${(data['timestamp'] as Timestamp?)?.toDate().toLocal().toString() ?? 'No data'}"),
-            ],
-          ),
+          children: docs.map((doc) {
+            final data = doc.data()! as Map<String, dynamic>;
+            final dateStr = data['date'] ?? '';
+            final timestamp = (data['timestamp'] as Timestamp?)?.toDate().toLocal().toString() ?? '';
+            final amount = data['intakeAmount'] ?? 0;
+            final totalAmount = data['totalAmount'] ?? 0;
+            final waterLossCauses = (data['waterLossCauses'] as List<dynamic>?)?.join(', ') ?? 'None';
+
+            return Card(
+              child: ListTile(
+                title: Text('Intake Amount: $amount'),
+                subtitle: Text('Total Amount: $totalAmount\nLoss Causes: $waterLossCauses\nDate: $dateStr'),
+                trailing: Text(timestamp.split(' ').first),
+              ),
+            );
+          }).toList(),
         );
       },
     );
@@ -297,8 +314,8 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> with Ticker
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
-            Tab(text: 'Scan'),
-            Tab(text: 'Treatment'),
+            Tab(text: 'Scans'),
+            Tab(text: 'Treatments'),
             Tab(text: 'Water Intake'),
           ],
         ),
