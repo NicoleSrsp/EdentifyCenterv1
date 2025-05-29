@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+
 class PatientHistoryScreen extends StatefulWidget {
   final Map<String, dynamic> folder; // patient data document fields only
   final String docId;                // patient document ID (patient ID)
@@ -136,125 +137,86 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> with Ticker
         if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
 
         final docs = snapshot.data?.docs ?? [];
-        if (docs.isEmpty) return const Center(child: Text('No scan records for this date.'));
+      if (docs.isEmpty) return const Center(child: Text('No scan records for this date.'));
 
-        final data = docs.first.data()! as Map<String, dynamic>;
+      // Get the first document (most recent scan)
+      final doc = docs.first;
+      final data = doc.data() as Map<String, dynamic>;
 
-        final classification = data['result'] ?? 'No classification available yet';
-        final recommendation = data['recommendations'] ?? 'No recommendations yet';
-        final confidence = int.tryParse(data['confidence_score']?.toString() ?? '0') ?? 0;
-        final photoUrl = data['imageURL']?.toString() ?? '';
-        final scanDate = (data['timestamp'] as Timestamp?)?.toDate().toLocal().toString() ?? 'No scan date available';
+      // Extract image URL - ensure field name matches your Firestore
+      final photoUrl = (data['imageURL'] as String?)?.trim();
 
-        if (!widget.readonly) {
-          _noteController.text = data['doctor_note'] ?? '';
-        }
+ // or 'photoUrl' depending on your Firestore
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (photoUrl.isNotEmpty)
-                ClipRRect(
+      // Debug print to verify URL
+      debugPrint('Image URL: $photoUrl');
+
+      return SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Improved Image Display
+            if (photoUrl != null && photoUrl.isNotEmpty)
+              Container(
+                height: 200,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  color: Colors.grey[200],
+                ),
+                child: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: Image.network(
                     photoUrl,
-                    height: 160,
                     width: double.infinity,
                     fit: BoxFit.cover,
                     loadingBuilder: (context, child, loadingProgress) {
                       if (loadingProgress == null) return child;
-                      return SizedBox(
-                        height: 160,
-                        child: Center(
-                          child: CircularProgressIndicator(
-                            value: loadingProgress.expectedTotalBytes != null
-                                ? loadingProgress.cumulativeBytesLoaded / (loadingProgress.expectedTotalBytes ?? 1)
-                                : null,
-                          ),
+                      return Center(
+                        child: CircularProgressIndicator(
+                          value: loadingProgress.expectedTotalBytes != null
+                              ? loadingProgress.cumulativeBytesLoaded / 
+                                (loadingProgress.expectedTotalBytes ?? 1)
+                              : null,
                         ),
                       );
                     },
-                    errorBuilder: (context, error, stackTrace) => const SizedBox(
-                      height: 160,
-                      child: Center(child: Icon(Icons.broken_image, size: 64)),
-                    ),
+                    errorBuilder: (context, error, stackTrace) {
+                      debugPrint('Image load error: $error');
+                      return Container(
+                        color: Colors.grey[200],
+                        child: const Center(
+                          child: Icon(Icons.broken_image, size: 48, color: Colors.grey),
+                        ),
+                      );
+                    },
                   ),
-                )
-              else
-                const SizedBox(
-                  height: 160,
-                  child: Center(child: Icon(Icons.image, size: 64)),
                 ),
-              const SizedBox(height: 10),
-              Text(classification, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              const Text("Recommendations:", style: TextStyle(fontWeight: FontWeight.w500)),
-              const SizedBox(height: 8),
-              Text(recommendation),
-              const SizedBox(height: 10),
-              Text("$confidence%", style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.teal)),
-              const Text("Confidence Score"),
-              const SizedBox(height: 20),
-              if (!widget.readonly) ...[
-                const Text("Edema Classification Review:", style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    if (!isApproved)
-                      Expanded(
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(backgroundColor: Colors.teal),
-                          onPressed: isLoading ? null : approveEntry,
-                          child: isLoading
-                              ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                              : const Text("Approve"),
-                        ),
-                      ),
-                    if (!isApproved) const SizedBox(width: 10),
-                    if (!isApproved)
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Reclassify pressed')));
-                        },
-                        child: const Text("Reclassify"),
-                      ),
-                    if (isApproved)
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: null,
-                          style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                          child: const Text("Approved"),
-                        ),
-                      ),
-                  ],
+              )
+            else
+              Container(
+                height: 200,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  color: Colors.grey[200],
                 ),
-                const SizedBox(height: 20),
-              ],
-              const Text("Doctor's Notes:", style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              TextField(
-                maxLines: 4,
-                controller: _noteController,
-                readOnly: widget.readonly,
-                decoration: const InputDecoration(border: OutlineInputBorder(), hintText: 'Enter notes here'),
+                child: const Center(
+                  child: Icon(Icons.image, size: 48, color: Colors.grey),
+                ),
               ),
-              const SizedBox(height: 10),
-              if (!widget.readonly)
-                ElevatedButton(
-                  onPressed: updateDoctorNote,
-                  child: const Text("Save Note"),
-                ),
-              const SizedBox(height: 10),
-              Text("Date Scanned: $scanDate", style: TextStyle(color: Colors.grey[700])),
-            ],
-          ),
-        );
-      },
-    );
-  }
+            
+            // Rest of your existing UI...
+            const SizedBox(height: 16),
+            Text(data['result'] ?? 'No classification', 
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            // ... continue with rest of your UI
+          ],
+        ),
+      );
+    },
+  );
+}
 
   Widget buildTreatmentTab() {
     return StreamBuilder<QuerySnapshot>(
