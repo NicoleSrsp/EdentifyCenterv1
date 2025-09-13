@@ -9,6 +9,7 @@ import 'change_password.dart';
 import 'screens/home_screen.dart';
 import 'screens/patient_list_screen.dart';
 import 'screens/mark_active.dart';
+import 'screens/doctors_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,7 +35,7 @@ class EdentifyApp extends StatelessWidget {
       onGenerateRoute: (settings) {
         switch (settings.name) {
           case '/':
-          return MaterialPageRoute(builder: (_) => const LandingPage());
+            return MaterialPageRoute(builder: (_) => const LandingPage());
 
           case '/centerSelection':
             return MaterialPageRoute(
@@ -92,6 +93,22 @@ class EdentifyApp extends StatelessWidget {
               builder: (_) => PatientListScreen(
                 centerId: args['centerId'],
                 centerName: args['centerName'],
+              ),
+            );
+
+          case '/doctors':
+            final args = settings.arguments as Map<String, dynamic>?;
+            if (args == null || args['centerName'] == null) {
+              return MaterialPageRoute(
+                builder: (_) => const Scaffold(
+                  body: Center(child: Text('Missing center data')),
+                ),
+              );
+            }
+            return MaterialPageRoute(
+              builder: (_) => DoctorsScreen(
+                centerName: args['centerName'],
+                centerId: args['centerId']
               ),
             );
 
