@@ -9,27 +9,36 @@ class CenterSelectionScreen extends StatefulWidget {
 }
 
 class _CenterSelectionScreenState extends State<CenterSelectionScreen> {
-  final _formKey = GlobalKey<FormState>();
+  List<Map<String, dynamic>> centers = [];
   String? selectedDialysisCenter;
-  String? selectedDoctor;
+  String? selectedCenterId;
+  bool _isLoading = true;
 
-  // Map of centers to their doctors
-  final Map<String, List<String>> centerDoctors = {
-    'R&B Dialysis Center': ['Dr. Rebecca Santos', 'Dr. Enrique Navarro'],
-    'RSI Dialysis Center': ['Dr. James Chua', 'Dr. Timothy Ong'],
-    'Hartman Dialysis Center': ['Dr. Andres Gomez', 'Dr. Melissa Tan'],
-  };
+  @override
+  void initState() {
+    super.initState();
+    fetchCenters();
+  }
 
-  List<String> availableDoctors = [];
-  bool showDoctorDropdown = false;
-
-  void _onCenterSelected(String? value) {
-    setState(() {
-      selectedDialysisCenter = value;
-      selectedDoctor = null;
-      availableDoctors = value != null ? centerDoctors[value]! : [];
-      showDoctorDropdown = value != null;
-    });
+  Future<void> fetchCenters() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance.collection('centers').get();
+      setState(() {
+        centers = snapshot.docs.map((doc) {
+          final data = doc.data();
+          return {
+            'centerName': data['name'],
+            'centerId': doc.id,
+          };
+        }).toList();
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to fetch centers: $e')),
+      );
+    }
   }
 
   @override
@@ -38,119 +47,86 @@ class _CenterSelectionScreenState extends State<CenterSelectionScreen> {
       body: Stack(
         children: [
           Positioned.fill(
-            child: Image.asset(
-              'assets/background.png',
-              fit: BoxFit.cover,
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(40),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Image.asset('assets/logo.png', height: 60),
-              ],
-            ),
+            child: Image.asset('assets/background.png', fit: BoxFit.cover),
           ),
           Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 400),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                      "Welcome to Edentify,",
-                      style: TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+            child: _isLoading
+                ? const CircularProgressIndicator(color: Colors.white)
+                : Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 400),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            "Welcome to Edentify,",
+                            style: TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          const Text(
+                            "Please select your dialysis center to continue.",
+                            style: TextStyle(fontSize: 18, color: Colors.white),
+                          ),
+                          const SizedBox(height: 20),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: DropdownButton<String>(
+                              isExpanded: true,
+                              value: selectedDialysisCenter,
+                              hint: const Text("Select Dialysis Center"),
+                              underline: const SizedBox(),
+                              items: centers.map<DropdownMenuItem<String>>((center) {
+                                return DropdownMenuItem<String>(
+                                  value: center['centerName'] as String,
+                                  child: Text(center['centerName'] as String),
+                                );
+                              }).toList(),
+                              onChanged: (value) {
+                                setState(() {
+                                  selectedDialysisCenter = value;
+                                  selectedCenterId = centers
+                                      .firstWhere((c) => c['centerName'] == value)['centerId'] as String;
+                                });
+                              },
+                            )
+                          ),
+                          const SizedBox(height: 20),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: Colors.black,
+                              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
+                            ),
+                            onPressed: (selectedDialysisCenter == null || selectedCenterId == null)
+                                ? null
+                                : () {
+                                    Navigator.pushNamed(
+                                      context,
+                                      '/login',
+                                      arguments: {
+                                        'centerName': selectedDialysisCenter,
+                                        'centerId': selectedCenterId,
+                                      },
+                                    );
+                                  },
+                            child: const Text(
+                              "Continue",
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 6),
-                    const Text(
-                      "Dialysis Center",
-                      style: TextStyle(fontSize: 18, color: Colors.white),
-                    ),
-                    const SizedBox(height: 20),
-                    // Center Dropdown
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: DropdownButton<String>(
-                        isExpanded: true,
-                        value: selectedDialysisCenter,
-                        hint: const Text("Select Dialysis Center"),
-                        underline: const SizedBox(),
-                        items: centerDoctors.keys.map((center) {
-                          return DropdownMenuItem(
-                            value: center,
-                            child: Text(center),
-                          );
-                        }).toList(),
-                        onChanged: _onCenterSelected,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    // Doctor Dropdown (only shown when center is selected)
-                    if (showDoctorDropdown)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: DropdownButton<String>(
-                          isExpanded: true,
-                          value: selectedDoctor,
-                          hint: const Text("Select Doctor"),
-                          underline: const SizedBox(),
-                          items: availableDoctors.map((doctor) {
-                            return DropdownMenuItem(
-                              value: doctor,
-                              child: Text(doctor),
-                            );
-                          }).toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              selectedDoctor = value;
-                            });
-                          },
-                        ),
-                      ),
-                    const SizedBox(height: 20),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: Colors.black,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 32, vertical: 18),
-                      ),
-                      onPressed: selectedDoctor == null
-                          ? null
-                          : () {
-                              Navigator.pushNamed(
-                                context,
-                                '/login',
-                                arguments: {
-                                  'centerName': selectedDialysisCenter,
-                                  'doctorName': selectedDoctor,
-                                },
-                              );
-                            },
-                      child: const Text("Continue",
-                          style: TextStyle(fontWeight: FontWeight.bold)),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+                  ),
           ),
         ],
       ),

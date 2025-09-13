@@ -3,15 +3,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
-  final String doctorId;
+  final String centerId;
   final String centerName;
-
 
   const ChangePasswordScreen({
     super.key,
-    required this.doctorId,
+    required this.centerId,
     required this.centerName,
-
   });
 
   @override
@@ -49,42 +47,30 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
     try {
       final user = FirebaseAuth.instance.currentUser;
+      if (user == null) throw Exception('No authenticated user found');
 
-      if (user == null) {
-        throw Exception('No authenticated user found');
-      }
-
-      // Remove reauthentication: already signed in
-
-      // 1. Update password in Firebase Auth
       await user.updatePassword(_newPasswordController.text.trim());
 
-      // 2. Update Firestore record
       await FirebaseFirestore.instance
-          .collection('doctor_inCharge')
-          .doc(widget.doctorId)
+          .collection('centers')
+          .doc(widget.centerId)
           .update({
         'isFirstLogin': false,
         'lastPasswordChange': FieldValue.serverTimestamp(),
       });
 
-      // 3. Navigate to home
       Navigator.pushReplacementNamed(
         context,
         '/home',
         arguments: {
           'centerName': widget.centerName,
-          'doctorName': widget.doctorId,
+          'userId': widget.centerId,
         },
       );
     } on FirebaseAuthException catch (e) {
-      setState(() {
-        _errorText = _getErrorMessage(e.code);
-      });
+      setState(() => _errorText = _getErrorMessage(e.code));
     } catch (e) {
-      setState(() {
-        _errorText = 'Password change failed: ${e.toString()}';
-      });
+      setState(() => _errorText = 'Password change failed: ${e.toString()}');
     } finally {
       setState(() => _isLoading = false);
     }
@@ -108,10 +94,6 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Change Password'),
-        automaticallyImplyLeading: false,
-      ),
       body: Stack(
         children: [
           Positioned.fill(
@@ -129,33 +111,17 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   key: _formKey,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        widget.centerName,
+                        'Change Password for ${widget.centerName}',
                         style: const TextStyle(
-                          fontSize: 18,
-                          color: Colors.white,
+                          fontSize: 20,
                           fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        widget.doctorId,
-                        style: const TextStyle(
-                          fontSize: 16,
                           color: Colors.white,
                         ),
                       ),
                       const SizedBox(height: 32),
-                      Text(
-                        'Set New Password',
-                        style: const TextStyle(
-                          fontSize: 20,
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
                       TextFormField(
                         controller: _newPasswordController,
                         obscureText: _obscureNewPassword,
@@ -164,15 +130,9 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                           prefixIcon: const Icon(Icons.lock),
                           suffixIcon: IconButton(
                             icon: Icon(
-                              _obscureNewPassword
-                                  ? Icons.visibility
-                                  : Icons.visibility_off,
+                              _obscureNewPassword ? Icons.visibility : Icons.visibility_off,
                             ),
-                            onPressed: () {
-                              setState(() {
-                                _obscureNewPassword = !_obscureNewPassword;
-                              });
-                            },
+                            onPressed: () => setState(() => _obscureNewPassword = !_obscureNewPassword),
                           ),
                           filled: true,
                           fillColor: Colors.white,
@@ -181,18 +141,10 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                           ),
                         ),
                         validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter new password';
-                          }
-                          if (value.length < 8) {
-                            return 'Password must be at least 8 characters';
-                          }
-                          if (!value.contains(RegExp(r'[A-Z]'))) {
-                            return 'Include at least one uppercase letter';
-                          }
-                          if (!value.contains(RegExp(r'[0-9]'))) {
-                            return 'Include at least one number';
-                          }
+                          if (value == null || value.isEmpty) return 'Please enter new password';
+                          if (value.length < 8) return 'Password must be at least 8 characters';
+                          if (!value.contains(RegExp(r'[A-Z]'))) return 'Include at least one uppercase letter';
+                          if (!value.contains(RegExp(r'[0-9]'))) return 'Include at least one number';
                           return null;
                         },
                       ),
@@ -205,15 +157,9 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                           prefixIcon: const Icon(Icons.lock),
                           suffixIcon: IconButton(
                             icon: Icon(
-                              _obscureConfirmPassword
-                                  ? Icons.visibility
-                                  : Icons.visibility_off,
+                              _obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
                             ),
-                            onPressed: () {
-                              setState(() {
-                                _obscureConfirmPassword = !_obscureConfirmPassword;
-                              });
-                            },
+                            onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
                           ),
                           filled: true,
                           fillColor: Colors.white,
@@ -222,52 +168,30 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                           ),
                         ),
                         validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please confirm your password';
-                          }
-                          if (value != _newPasswordController.text) {
-                            return 'Passwords do not match';
-                          }
+                          if (value == null || value.isEmpty) return 'Please confirm your password';
+                          if (value != _newPasswordController.text) return 'Passwords do not match';
                           return null;
                         },
                       ),
                       if (_errorText.isNotEmpty)
                         Padding(
                           padding: const EdgeInsets.only(top: 16),
-                          child: Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.red[900]?.withOpacity(0.8),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.error_outline, color: Colors.white),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    _errorText,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
+                          child: Text(
+                            _errorText,
+                            style: const TextStyle(color: Colors.redAccent, fontSize: 14),
                           ),
                         ),
                       const SizedBox(height: 32),
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
+                          onPressed: _isLoading ? null : _changePassword,
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
                           ),
-                          onPressed: _isLoading ? null : _changePassword,
                           child: _isLoading
                               ? const SizedBox(
                                   width: 20,

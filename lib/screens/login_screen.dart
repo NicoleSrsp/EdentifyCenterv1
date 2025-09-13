@@ -2,29 +2,44 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-class DoctorLoginScreen extends StatefulWidget {
+class CenterLoginScreen extends StatefulWidget {
   final String centerName;
-  final String doctorName;
+  final String centerId;
 
-  const DoctorLoginScreen({
-    super.key,
-    required this.centerName,
-    required this.doctorName,
-  });
+  const CenterLoginScreen({super.key,  required this.centerName, required this.centerId});
 
   @override
-  State<DoctorLoginScreen> createState() => _DoctorLoginScreenState();
+  State<CenterLoginScreen> createState() => _CenterLoginScreenState();
 }
 
-class _DoctorLoginScreenState extends State<DoctorLoginScreen> {
+class _CenterLoginScreenState extends State<CenterLoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
-  String _errorText = '';
   bool _obscurePassword = true;
+  String _errorText = '';
   int _loginAttempts = 0;
   bool _accountLocked = false;
+  String _centerName = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchCenterName();
+  }
+
+  Future<void> _fetchCenterName() async {
+    final doc = await FirebaseFirestore.instance
+        .collection('centers')
+        .doc(widget.centerId)
+        .get();
+    if (doc.exists) {
+      setState(() {
+        _centerName = (doc.data() as Map<String, dynamic>)['name'] ?? '';
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -33,128 +48,98 @@ class _DoctorLoginScreenState extends State<DoctorLoginScreen> {
     super.dispose();
   }
 
- Future<void> _login() async {
-  if (!_formKey.currentState!.validate() || _accountLocked) return;
+  Future<void> _login() async {
+    if (!_formKey.currentState!.validate() || _accountLocked) return;
 
-  setState(() {
-    _isLoading = true;
-    _errorText = '';
-  });
+    setState(() {
+      _isLoading = true;
+      _errorText = '';
+    });
 
-  try {
-    // 1. Verify doctor exists in Firestore
-    final doctorSnapshot = await FirebaseFirestore.instance
-        .collection('doctor_inCharge')
-        .where('name', isEqualTo: widget.doctorName)
-        .where('email', isEqualTo: _emailController.text.trim())
-        .limit(1)
-        .get();
-
-    if (doctorSnapshot.docs.isEmpty) {
-      throw FirebaseAuthException(
-        code: 'doctor-not-found',
-        message: 'No doctor found with these credentials',
-      );
-    }
-
-    final doc = doctorSnapshot.docs.first;
-    final data = doc.data() as Map<String, dynamic>;
-    final doctorId = doc.id;
-    final isFirstLogin = data['isFirstLogin'] ?? false;
-
-    // 2. Check if account is locked
-    if (_loginAttempts >= 3 || (data['isLocked'] ?? false)) {
-      await _lockAccount(doctorId);
-      throw FirebaseAuthException(
-        code: 'account-locked',
-        message: 'Account locked. Please contact administrator.',
-      );
-    }
-
-    // 3. Authenticate with Firebase Auth
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
-    } on FirebaseAuthException catch (e) {
-      if (e.code == 'user-not-found') {
-        await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      // 1. Check if center user exists by centerId
+      final docRef = FirebaseFirestore.instance
+          .collection('centers')
+          .doc(widget.centerId);
+
+      final doc = await docRef.get();
+
+      if (!doc.exists) {
+        throw FirebaseAuthException(
+          code: 'user-not-found',
+          message: 'No center account found.',
+        );
+      }
+
+      final userData = doc.data() as Map<String, dynamic>;
+      final isFirstLogin = userData['isFirstLogin'] ?? true;
+      final isLocked = userData['isLocked'] ?? false;
+
+      if (isLocked || _loginAttempts >= 3) {
+        await _lockAccount(widget.centerId);
+        throw FirebaseAuthException(
+            code: 'account-locked',
+            message: 'Account locked. Contact administrator.');
+      }
+
+      // 2. Authenticate using Firebase Auth
+      try {
+        await FirebaseAuth.instance.signInWithEmailAndPassword(
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
         );
+      } on FirebaseAuthException catch (e) {
+        if (e.code == 'user-not-found') {
+          // Create new account if not exists
+          await FirebaseAuth.instance.createUserWithEmailAndPassword(
+            email: _emailController.text.trim(),
+            password: _passwordController.text.trim(),
+          );
+        } else {
+          throw e;
+        }
+      }
+
+      // Reset login attempts
+      _loginAttempts = 0;
+
+      // Navigate based on first login
+      if (isFirstLogin) {
+        Navigator.pushReplacementNamed(
+          context,
+          '/changePassword',
+          arguments: {
+            'centerId': widget.centerId,
+            'centerName': _centerName,
+          },
+        );
       } else {
-        throw e;
+        Navigator.pushReplacementNamed(
+          context,
+          '/home',
+          arguments: {'centerId': widget.centerId, 'centerName': _centerName},
+        );
       }
+    } on FirebaseAuthException catch (e) {
+      _loginAttempts++;
+      setState(() {
+        _errorText = e.message ?? 'Login failed';
+        if (_loginAttempts >= 3) _accountLocked = true;
+      });
+    } catch (e) {
+      setState(() {
+        _errorText = 'Login failed: $e';
+      });
+    } finally {
+      setState(() => _isLoading = false);
     }
-
-    // 4. Reset login attempts on success
-    _loginAttempts = 0;
-
-    // 5. Navigate based on first login status
-    if (isFirstLogin) {
-      Navigator.pushReplacementNamed(
-        context,
-        '/changePassword',
-        arguments: {
-          'doctorId': doctorId,
-          'centerName': widget.centerName,
-          'doctorName': widget.doctorName,
-        },
-      );
-    } else {
-      Navigator.pushReplacementNamed(
-        context,
-        '/home',
-        arguments: {
-          'centerName': widget.centerName,
-          'doctorId': doctorId,
-        },
-      );
-    }
-  } on FirebaseAuthException catch (e) {
-    _loginAttempts++;
-    setState(() {
-      _errorText = _getErrorMessage(e.code);
-      if (_loginAttempts >= 3) {
-        _accountLocked = true;
-      }
-    });
-  } catch (e) {
-    setState(() {
-      _errorText = 'Login failed: ${e.toString()}';
-    });
-  } finally {
-    setState(() => _isLoading = false);
   }
-}
 
-
-  Future<void> _lockAccount(String doctorId) async {
+  Future<void> _lockAccount(String centerId) async {
     await FirebaseFirestore.instance
-        .collection('doctor_inCharge')
-        .doc(doctorId)
+        .collection('centers')
+        .doc(centerId)
         .update({'isLocked': true, 'lockedAt': FieldValue.serverTimestamp()});
-  }
-
-  String _getErrorMessage(String code) {
-    switch (code) {
-      case 'invalid-email':
-        return 'Invalid email format';
-      case 'user-disabled':
-        return 'Account disabled';
-      case 'user-not-found':
-      case 'doctor-not-found':
-        return 'Doctor not found';
-      case 'wrong-password':
-        return 'Incorrect password. ${3 - _loginAttempts} attempts remaining';
-      case 'too-many-requests':
-        return 'Too many attempts. Try again later';
-      case 'account-locked':
-        return 'Account locked. Contact administrator';
-      default:
-        return 'Login failed (code: $code)';
-    }
   }
 
   @override
@@ -176,19 +161,13 @@ class _DoctorLoginScreenState extends State<DoctorLoginScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        "Logging into: ${widget.centerName}",
+                        _centerName.isEmpty
+                            ? "Logging in..."
+                            : "Logging into: $_centerName",
                         style: const TextStyle(
                           fontSize: 18,
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        "Doctor: ${widget.doctorName}",
-                        style: const TextStyle(
-                          fontSize: 16,
-                          color: Colors.white,
                         ),
                       ),
                       const SizedBox(height: 32),
@@ -208,9 +187,7 @@ class _DoctorLoginScreenState extends State<DoctorLoginScreen> {
                           if (value == null || value.isEmpty) {
                             return 'Please enter your email';
                           }
-                          if (!value.contains('@')) {
-                            return 'Enter a valid email';
-                          }
+                          if (!value.contains('@')) return 'Enter a valid email';
                           return null;
                         },
                       ),
@@ -243,9 +220,7 @@ class _DoctorLoginScreenState extends State<DoctorLoginScreen> {
                           if (value == null || value.isEmpty) {
                             return 'Please enter your password';
                           }
-                          if (value.length < 6) {
-                            return 'Password must be at least 6 characters';
-                          }
+                          if (value.length < 6) return 'Password must be at least 6 characters';
                           return null;
                         },
                       ),
@@ -260,18 +235,12 @@ class _DoctorLoginScreenState extends State<DoctorLoginScreen> {
                             ),
                             child: Row(
                               children: [
-                                const Icon(
-                                  Icons.error_outline,
-                                  color: Colors.white,
-                                ),
+                                const Icon(Icons.error_outline, color: Colors.white),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
                                     _errorText,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 14,
-                                    ),
+                                    style: const TextStyle(color: Colors.white, fontSize: 14),
                                   ),
                                 ),
                               ],
@@ -284,8 +253,7 @@ class _DoctorLoginScreenState extends State<DoctorLoginScreen> {
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
-                            backgroundColor:
-                                _accountLocked ? Colors.grey : Colors.white,
+                            backgroundColor: _accountLocked ? Colors.grey : Colors.white,
                             foregroundColor: Colors.black,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
@@ -303,31 +271,8 @@ class _DoctorLoginScreenState extends State<DoctorLoginScreen> {
                                 )
                               : const Text(
                                   'LOG IN',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                                 ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      TextButton(
-                        onPressed: _accountLocked
-                            ? null
-                            : () {
-                                FirebaseAuth.instance
-                                    .sendPasswordResetEmail(
-                                  email: _emailController.text.trim(),
-                                );
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Password reset email sent'),
-                                  ),
-                                );
-                              },
-                        child: const Text(
-                          'Forgot Password?',
-                          style: TextStyle(color: Colors.white),
                         ),
                       ),
                     ],

@@ -1,436 +1,233 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:table_calendar/table_calendar.dart';
-import 'archive_patient_screen.dart';
+import 'package:intl/intl.dart';
+import 'side_menu.dart';
 
 class HomeScreen extends StatefulWidget {
+  final String centerId;
   final String centerName;
-  final String doctorId;
 
-  const HomeScreen({
-    super.key,
-    required this.centerName,
-    required this.doctorId,
-  });
+  const HomeScreen({super.key, required this.centerId, required this.centerName});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
-  late TabController _tabController;
-  final TextEditingController _searchController = TextEditingController();
-  String _searchText = '';
-  DateTime _selectedDate = DateTime.now();
+class _HomeScreenState extends State<HomeScreen> {
+  DateTime selectedDate = DateTime.now();
+  String searchQuery = '';
+  List<Map<String, dynamic>> patients = [];
 
-  String? doctorName;
-  bool isLoading = true;
-  String errorMessage = '';
+  final List<String> shifts = ['First', 'Second', 'Third'];
+  final List<String> days = ['M', 'T', 'W', 'TH', 'F'];
 
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 3, vsync: this);
-    _searchController.addListener(() {
-      setState(() {
-        _searchText = _searchController.text.toLowerCase();
-      });
-    });
-    _fetchDoctorData();
+  List<Map<String, dynamic>> get weeklyPatients {
+    DateTime startOfWeek =
+        selectedDate.subtract(Duration(days: selectedDate.weekday - 1));
+    DateTime endOfWeek = startOfWeek.add(const Duration(days: 6));
+
+    return patients.where((p) {
+      final date = p['date'] as DateTime;
+      final matchWeek =
+          !date.isBefore(startOfWeek) && !date.isAfter(endOfWeek);
+      final matchSearch =
+          searchQuery.isEmpty || p['name'].toLowerCase().contains(searchQuery.toLowerCase());
+      return matchWeek && matchSearch;
+    }).toList();
   }
 
-  Future<void> _fetchDoctorData() async {
-    try {
-      final docSnapshot = await FirebaseFirestore.instance
-          .collection('doctor_inCharge')
-          .doc(widget.doctorId)
-          .get();
-
-      if (!docSnapshot.exists) {
-        setState(() {
-          errorMessage = 'Doctor not found.';
-          isLoading = false;
-        });
-        return;
-      }
-
-      setState(() {
-        doctorName = docSnapshot.data()?['name'] ?? 'Doctor';
-        isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        errorMessage = 'Failed to load doctor info: $e';
-        isLoading = false;
-      });
-    }
-  }
-
-  String _getFullName(Map<String, dynamic> data) {
-    return '${data['firstName'] ?? ''} ${data['middleName'] ?? ''} ${data['lastName'] ?? ''}'
-        .replaceAll(RegExp(' +'), ' ')
-        .trim();
-  }
-
-  Widget _buildPatientList() {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('users')
-          .where('doctorInCharge', isEqualTo: widget.doctorId)
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          return const Center(child: Text('Error loading patients'));
-        }
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        var docs = snapshot.data!.docs;
-
-        // Optional: filter by search first
-        if (_searchText.isNotEmpty) {
-          docs = docs.where((doc) {
-            final data = doc.data() as Map<String, dynamic>;
-            final fullName = _getFullName(data).toLowerCase();
-            return fullName.contains(_searchText);
-          }).toList();
-        }
-
-        // 🔠 Sort alphabetically by full name
-        docs.sort((a, b) {
-          final nameA = _getFullName(a.data() as Map<String, dynamic>).toLowerCase();
-          final nameB = _getFullName(b.data() as Map<String, dynamic>).toLowerCase();
-          return nameA.compareTo(nameB);
-        });
-
-        if (_searchText.isNotEmpty) {
-          docs = docs.where((doc) {
-            final data = doc.data() as Map<String, dynamic>;
-            final fullName = _getFullName(data).toLowerCase();
-            return fullName.contains(_searchText);
-          }).toList();
-        }
-
-        if (docs.isEmpty) {
-          return const Center(child: Text('No patients found.'));
-        }
-
-        return ListView.builder(
-          itemCount: docs.length,
-          itemBuilder: (context, index) {
-            final patient = docs[index];
-            final data = patient.data() as Map<String, dynamic>;
-            final fullName = _getFullName(data);
-            final birthday = data['birthday'] ?? 'Unknown';
-
-            return Card(
-              color: Colors.teal.shade400,
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: ListTile(
-                title: Text(
-                  fullName,
-                  style: const TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.w600),
-                ),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children:[
-                    Text(
-                      'Birthday: $birthday',
-                      style: const TextStyle(color: Colors.white70),
-                    ),
-                  ],
-                ),
-                trailing: _tabController.index == 0
-                    ? PopupMenuButton<String>(
-                        icon: const Icon(Icons.more_vert, color: Colors.white),
-                        onSelected: (value) async {
-                          if (value == 'archive') {
-                            try {
-                              await FirebaseFirestore.instance
-                                  .collection('users')
-                                  .doc(patient.id)
-                                  .update({'status': 'archived'});
-
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content: Text('Patient is now archived')),
-                              );
-                            } catch (e) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                    content:
-                                        Text('Failed to archive patient: $e')),
-                              );
-                            }
-                          }
-                        },
-                        itemBuilder: (context) => [
-                          const PopupMenuItem(
-                            value: 'archive',
-                            child: Text('Archive'),
-                          ),
-                        ],
-                      )
-                    : null,
-                onTap: () {
-                   Navigator.pushNamed(
-                    context,
-                    '/folders',
-                    arguments: patient.id,
-                  );
-                },
-              ),
-            );
-          },
-        );
-      },
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: selectedDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
     );
+    if (picked != null) {
+      setState(() {
+        selectedDate = picked;
+      });
+    }
   }
 
-  Widget _buildPendingApprovals() {
-    if (doctorName == null) {
-      return const Center(child: CircularProgressIndicator());
-    }
+  void _addPatient() {
+    String name = '';
+    String frequency = 'M,W,F';
+    String shift = 'First';
 
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('pending_approvals')
-          .where('doctorInCharge', isEqualTo: doctorName)
-          .where('status', isEqualTo: 'pending')
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.hasError) return const Center(child: Text('Error loading approvals'));
-        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-
-        final docs = snapshot.data!.docs;
-        if (docs.isEmpty) return const Center(child: Text('No pending approvals.'));
-
-        return ListView.builder(
-          itemCount: docs.length,
-          itemBuilder: (context, index) {
-            final approval = docs[index];
-            final approvalData = approval.data() as Map<String, dynamic>;
-            final patientName = approvalData['patientName'] ?? 'Unknown';
-            final submittedDate = approvalData['createdAt'] != null
-                ? (approvalData['createdAt'] as Timestamp).toDate().toString()
-                : 'Unknown date';
-
-            return Card(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: ListTile(
-                title: Text(patientName),
-                subtitle: Text('Submitted on $submittedDate'),
-                trailing: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pushNamed(
-                      context,
-                      '/entryDetail',
-                      arguments: {
-                        'approvalData': approvalData,
-                        'docId': approval.id,
-                      },
-                    );
-                  },
-                  child: const Text('View'),
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildSchedules() {
-    String formatDate(DateTime date) {
-      return "${date.year.toString().padLeft(4, '0')}-"
-          "${date.month.toString().padLeft(2, '0')}-"
-          "${date.day.toString().padLeft(2, '0')}";
-    }
-
-    return Column(
-      children: [
-        TableCalendar(
-          focusedDay: _selectedDate,
-          firstDay: DateTime.utc(2020),
-          lastDay: DateTime.utc(2030),
-          calendarFormat: CalendarFormat.month,
-          selectedDayPredicate: (day) => isSameDay(_selectedDate, day),
-          onDaySelected: (selectedDay, focusedDay) {
-            setState(() {
-              _selectedDate = selectedDay;
-            });
-          },
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Add Patient"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              decoration: const InputDecoration(labelText: "Patient Name"),
+              onChanged: (v) => name = v,
+            ),
+            const SizedBox(height: 10),
+            DropdownButtonFormField<String>(
+              decoration: const InputDecoration(labelText: "Frequency"),
+              value: frequency,
+              items: const [
+                DropdownMenuItem(value: 'M,W,F', child: Text('M,W,F')),
+                DropdownMenuItem(value: 'T,TH', child: Text('T,TH')),
+              ],
+              onChanged: (v) {
+                if (v != null) frequency = v;
+              },
+            ),
+            const SizedBox(height: 10),
+            DropdownButtonFormField<String>(
+              decoration: const InputDecoration(labelText: "Shift"),
+              value: shift,
+              items: shifts
+                  .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                  .toList(),
+              onChanged: (v) {
+                if (v != null) shift = v;
+              },
+            ),
+          ],
         ),
-        const SizedBox(height: 16),
-        Expanded(
-          child: StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection('users')
-                .where('centerId', isEqualTo: widget.centerName)
-                .snapshots(),
-            builder: (context, snapshot) {
-              if (snapshot.hasError) return const Center(child: Text('Error loading schedules'));
-              if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-
-              final docs = snapshot.data!.docs;
-              final patientsForToday = docs.where((doc) {
-                final patientData = doc.data() as Map<String, dynamic>;
-                final birthday = patientData['birthday'] as String?;
-                if (birthday == null) return false;
-
-                final todayFormatted = formatDate(_selectedDate);
-                return birthday.contains(todayFormatted.substring(5)); // MM-DD
-              }).toList();
-
-              if (patientsForToday.isEmpty) {
-                return const Center(child: Text('No patients scheduled for this day.'));
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+          ElevatedButton(
+            onPressed: () {
+              if (name.isNotEmpty) {
+                setState(() {
+                  patients.add({
+                    'name': name,
+                    'frequency': frequency,
+                    'shift': shift,
+                    'date': selectedDate
+                  });
+                });
               }
-
-              return ListView.builder(
-                itemCount: patientsForToday.length,
-                itemBuilder: (context, index) {
-                  final patient = patientsForToday[index];
-                  final patientData = patient.data() as Map<String, dynamic>;
-                  final fullName = _getFullName(patientData);
-
-                  return ListTile(
-                    leading: const Icon(Icons.calendar_today),
-                    title: Text(fullName),
-                    subtitle: Text('Birthday: ${patientData['birthday']}'),
-                  );
-                },
-              );
+              Navigator.pop(context);
             },
+            child: const Text("Add"),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWeeklyTable() {
+    Map<String, Map<String, List<String>>> table = {};
+    for (var s in shifts) {
+      table[s] = {for (var d in days) d: []};
+    }
+
+    for (var p in weeklyPatients) {
+      final pShift = p['shift'];
+      final pFreq = p['frequency'].split(',');
+      final date = p['date'] as DateTime;
+      final dayAbbr = days[(date.weekday - 1) % 5];
+
+      if (pFreq.contains(dayAbbr)) {
+        table[pShift]?[dayAbbr]?.add(p['name']);
+      }
+    }
+
+    return Table(
+      border: TableBorder.all(color: Colors.grey.shade300),
+      children: [
+        TableRow(
+          children: [
+            const SizedBox(),
+            ...days.map((d) => Center(child: Text(d, style: const TextStyle(fontWeight: FontWeight.bold)))).toList(),
+          ],
         ),
+        ...shifts.map((s) {
+          return TableRow(
+            children: [
+              Center(child: Text(s, style: const TextStyle(fontWeight: FontWeight.bold))),
+              ...days.map((d) {
+                final names = table[s]?[d] ?? [];
+                return Padding(
+                  padding: const EdgeInsets.all(4),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: names.map((n) => Text(n)).toList(),
+                  ),
+                );
+              }).toList(),
+            ],
+          );
+        }).toList(),
       ],
     );
   }
 
   @override
-  void dispose() {
-    _tabController.dispose();
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    if (isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    if (errorMessage.isNotEmpty) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('Home'),
-          backgroundColor: Colors.teal.shade700,
-        ),
-        body: Center(child: Text(errorMessage)),
-      );
-    }
+    String monthYear = DateFormat.yMMMM().format(selectedDate);
 
     return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        backgroundColor: Colors.teal.shade700,
-        title: Row(
-          children: [
-            Image.asset('assets/logo.png', height: 32),
-            const SizedBox(width: 8),
-            const Text(
-              'Edentify',
-              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
-            ),
-          ],
-        ),
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: Colors.white,
-          unselectedLabelColor: const Color.fromARGB(255, 115, 193, 184),
-          indicatorColor: Colors.white,
-          tabs: const [
-            Tab(text: 'Patients'),
-            Tab(text: 'Pending Approvals'),
-            Tab(text: 'Schedules'),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications, color: Colors.white),
-            onPressed: () {
-              // TODO: Implement notifications logic
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.white),
-            onPressed: () {
-              // TODO: Implement logout logic
-            },
-          ),
-        ],
-      ),
-      body: TabBarView(
-        controller: _tabController,
+      body: Row(
         children: [
-          // Patients Tab
-          Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _searchController,
-                        decoration: InputDecoration(
-                          prefixIcon: const Icon(Icons.search),
-                          hintText: 'Search patients',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
+          // Permanent Side Menu
+          SideMenu( centerId: widget.centerId, centerName: widget.centerName, selectedMenu: 'Home'),
+
+          // Main Content
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Top row: date picker + search + add
+                  Row(
+                    children: [
+                      GestureDetector(
+                        onTap: _pickDate,
+                        child: Row(
+                          children: [
+                            Text(
+                              monthYear,
+                              style: const TextStyle(
+                                  fontSize: 18, fontWeight: FontWeight.bold),
+                            ),
+                            const Icon(Icons.arrow_drop_down),
+                          ],
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-                      ),
-                      icon: const Icon(Icons.archive),
-                      label: const Text('Archive'),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => ArchivedPatientsScreen(
-                              centerName: widget.centerName,
-                            ),
+                      const Spacer(),
+                      SizedBox(
+                        width: 250,
+                        child: TextField(
+                          decoration: const InputDecoration(
+                            hintText: "Search Patient",
+                            prefixIcon: Icon(Icons.search),
+                            border: OutlineInputBorder(),
+                            isDense: true,
                           ),
-                        );
-                      },
+                          onChanged: (v) {
+                            setState(() {
+                              searchQuery = v;
+                            });
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.person_add),
+                        onPressed: _addPatient,
+                        tooltip: 'Add Patient',
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: _buildWeeklyTable(),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              Expanded(child: _buildPatientList()),
-            ],
+            ),
           ),
-
-          // Pending Approvals Tab
-          _buildPendingApprovals(),
-
-          // Schedules Tab
-          _buildSchedules(),
         ],
       ),
     );

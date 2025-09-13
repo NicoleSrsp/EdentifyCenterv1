@@ -19,14 +19,16 @@ class LandingPage extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Image.asset(
-                  'assets/logo.png', 
-                  height: 180,       
+                  'assets/logo.png',
+                  height: 180,
                 ),
                 const SizedBox(height: 40),
+
+                // Doctor Button
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
-                    foregroundColor: Color.fromARGB(255, 0, 121, 107),
+                    foregroundColor: const Color.fromARGB(255, 0, 121, 107),
                     padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
                   ),
                   onPressed: () {
@@ -40,6 +42,9 @@ class LandingPage extends StatelessWidget {
                     ),
                   ),
                 ),
+
+                const SizedBox(height: 20),
+              
               ],
             ),
           ),
