@@ -12,6 +12,10 @@ class SideMenu extends StatelessWidget {
     this.selectedMenu = 'Home',
   });
 
+  // Define your custom brand colors
+  static const Color primaryColor = Color(0xFF056C5B);
+  static const Color darkerPrimaryColor = Color(0xFF045347);
+
   Widget _buildMenuItem({
     required BuildContext context,
     required IconData icon,
@@ -28,14 +32,14 @@ class SideMenu extends StatelessWidget {
           fontWeight: selected ? FontWeight.bold : FontWeight.normal,
         ),
       ),
-      tileColor: selected ? Colors.teal.shade600 : Colors.teal.shade700,
+      tileColor: selected ? primaryColor : darkerPrimaryColor,
       onTap: () {
         Navigator.pushReplacementNamed(
           context,
           routeName,
           arguments: {
-            'centerId': centerId,    
-            'centerName': centerName, 
+            'centerId': centerId,
+            'centerName': centerName,
           },
         );
       },
@@ -46,7 +50,7 @@ class SideMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: 250,
-      color: Colors.teal.shade700,
+      color: darkerPrimaryColor,
       child: Column(
         children: [
           Container(

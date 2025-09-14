@@ -4,6 +4,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'side_menu.dart';
 import 'doctor_detail_screen.dart';
 
+// Define your custom colors once
+const Color primaryColor = Color(0xFF056C5B); // main green
+const Color darkerPrimaryColor = Color(0xFF045347); // darker variant
+
 class DoctorsScreen extends StatefulWidget {
   final String centerId;
   final String centerName;
@@ -58,6 +62,8 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                     builder: (context) => DoctorDetailScreen(
                       doctorId: doctor.id,
                       doctorName: doctorName,
+                      centerId: widget.centerId,
+                      centerName: widget.centerName,
                     ),
                   ),
                 );
@@ -234,7 +240,7 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.teal,
+        backgroundColor: primaryColor,
         onPressed: _showAddDoctorDialog,
         child: const Icon(Icons.add, color: Colors.white),
       ),
@@ -256,7 +262,7 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(
                       horizontal: 16, vertical: 16),
-                  color: Colors.teal.shade700,
+                  color: darkerPrimaryColor,
                   child: Text(
                     widget.centerName,
                     style: const TextStyle(
