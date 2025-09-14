@@ -5,10 +5,8 @@ import 'firebase_options.dart';
 import 'screens/landing_page.dart';
 import 'screens/center_selection.dart';
 import 'screens/login_screen.dart';
-import 'change_password.dart';
 import 'screens/home_screen.dart';
 import 'screens/patient_list_screen.dart';
-import 'screens/mark_active.dart';
 import 'screens/doctors_screen.dart';
 
 void main() async {

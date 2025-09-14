@@ -68,7 +68,7 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 10),
             DropdownButtonFormField<String>(
               decoration: const InputDecoration(labelText: "Frequency"),
-              value: frequency,
+              initialValue: frequency,
               items: const [
                 DropdownMenuItem(value: 'M,W,F', child: Text('M,W,F')),
                 DropdownMenuItem(value: 'T,TH', child: Text('T,TH')),
@@ -80,7 +80,7 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 10),
             DropdownButtonFormField<String>(
               decoration: const InputDecoration(labelText: "Shift"),
-              value: shift,
+              initialValue: shift,
               items: shifts
                   .map((s) => DropdownMenuItem(value: s, child: Text(s)))
                   .toList(),
