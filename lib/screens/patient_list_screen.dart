@@ -44,98 +44,107 @@ class _PatientListScreenState extends State<PatientListScreen> {
     return '$lastName, $firstName';
   }
 
-  /// Pop-up dialog to add new patient
-  void _showAddPatientDialog() {
-    final _formKey = GlobalKey<FormState>();
-    final TextEditingController firstNameController = TextEditingController();
-    final TextEditingController lastNameController = TextEditingController();
-    final TextEditingController mobileController = TextEditingController();
-    final TextEditingController passwordController = TextEditingController();
-    final TextEditingController confirmPasswordController =
-        TextEditingController();
+    /// Pop-up dialog to add new patient
+    void _showAddPatientDialog() {
+      final TextEditingController firstNameController = TextEditingController();
+      final TextEditingController lastNameController = TextEditingController();
+      final TextEditingController mobileController = TextEditingController();
+      final TextEditingController passwordController = TextEditingController();
+      final TextEditingController confirmPasswordController =
+          TextEditingController();
 
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Add Patient'),
-          content: Form(
-            key: _formKey,
-            child: SingleChildScrollView(
+      String? selectedDoctorId; 
+
+      showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text('Add Patient'),
+            content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  TextFormField(
+                  TextField(
                     controller: firstNameController,
                     decoration: const InputDecoration(labelText: 'First Name'),
-                    validator: (value) =>
-                        value == null || value.isEmpty ? 'Required' : null,
                   ),
-                  TextFormField(
+                  TextField(
                     controller: lastNameController,
                     decoration: const InputDecoration(labelText: 'Last Name'),
-                    validator: (value) =>
-                        value == null || value.isEmpty ? 'Required' : null,
                   ),
-                  TextFormField(
+                  TextField(
                     controller: mobileController,
-                    decoration:
-                        const InputDecoration(labelText: 'Mobile Number'),
+                    decoration: const InputDecoration(labelText: 'Mobile Number'),
                     keyboardType: TextInputType.phone,
-                    validator: (value) =>
-                        value == null || value.isEmpty ? 'Required' : null,
                   ),
-                  TextFormField(
+                  TextField(
                     controller: passwordController,
                     decoration: const InputDecoration(labelText: 'Password'),
                     obscureText: true,
-                    validator: (value) =>
-                        value == null || value.isEmpty ? 'Required' : null,
                   ),
-                  TextFormField(
+                  TextField(
                     controller: confirmPasswordController,
                     decoration:
                         const InputDecoration(labelText: 'Confirm Password'),
                     obscureText: true,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) return 'Required';
-                      if (value != passwordController.text) {
-                        return 'Passwords do not match';
-                      }
-                      return null;
-                    },
                   ),
+
+                  const SizedBox(height: 16),
+                  // Dropdown for doctors under this center
+                  StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance
+                      .collection('doctor_inCharge')
+                      .where('centerId', isEqualTo: widget.centerId) // match current center
+                      .snapshots(),
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) {
+                      return const CircularProgressIndicator();
+                    }
+
+                    final docs = snapshot.data!.docs;
+
+                    if (docs.isEmpty) {
+                      return const Text("No doctors available.");
+                    }
+
+                    return DropdownButtonFormField<String>(
+                      decoration: const InputDecoration(labelText: "Assign Doctor"),
+                      value: selectedDoctorId,
+                      items: docs.map((doc) {
+                        final data = doc.data() as Map<String, dynamic>;
+                        return DropdownMenuItem<String>(
+                          value: doc.id,
+                          child: Text(data['name'] ?? "No Name"),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        selectedDoctorId = value;
+                      },
+                    );
+                  },
+                ),
                 ],
               ),
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryColor,
-                foregroundColor: Colors.white,
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
               ),
-              onPressed: () async {
-                if (_formKey.currentState!.validate()) {
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color.fromARGB(255, 0, 121, 107),
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: () async {
                   final firstName = firstNameController.text.trim();
                   final lastName = lastNameController.text.trim();
                   final mobile = mobileController.text.trim();
                   final password = passwordController.text.trim();
 
-                  // Check if mobile already exists
-                  final existing = await FirebaseFirestore.instance
-                      .collection('users')
-                      .where('mobileNumber', isEqualTo: mobile)
-                      .get();
-
-                  if (existing.docs.isNotEmpty) {
+                  if (selectedDoctorId == null) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Mobile number already exists')),
+                      const SnackBar(content: Text("Please assign a doctor.")),
                     );
                     return;
                   }
@@ -151,20 +160,22 @@ class _PatientListScreenState extends State<PatientListScreen> {
                     'mobileNumber': mobile,
                     'password': hashedPassword,
                     'centerId': widget.centerId,
+                    'doctorId': selectedDoctorId,
                     'status': 'active',
                     'createdAt': FieldValue.serverTimestamp(),
                   });
 
                   Navigator.pop(context);
-                }
-              },
-              child: const Text('Add'),
-            ),
-          ],
-        );
-      },
-    );
-  }
+                },
+                child: const Text('Add'),
+              ),
+            ],
+          );
+        },
+      );
+    }
+
+
 
   /// Popup for archived patients
   void _showArchivedPatientsPopup() {
