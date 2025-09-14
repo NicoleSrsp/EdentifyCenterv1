@@ -22,6 +22,10 @@ class _PatientListScreenState extends State<PatientListScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchText = '';
 
+  // Custom brand colors
+  static const Color primaryColor = Color(0xFF056C5B);
+  static const Color darkerPrimaryColor = Color(0xFF045347);
+
   @override
   void initState() {
     super.initState();
@@ -112,7 +116,7 @@ class _PatientListScreenState extends State<PatientListScreen> {
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color.fromARGB(255, 0, 121, 107),
+                backgroundColor: primaryColor,
                 foregroundColor: Colors.white,
               ),
               onPressed: () async {
@@ -217,8 +221,7 @@ class _PatientListScreenState extends State<PatientListScreen> {
                                   ),
                                   ElevatedButton(
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor:
-                                          const Color.fromARGB(255, 0, 121, 107),
+                                      backgroundColor: primaryColor,
                                       foregroundColor: Colors.white,
                                     ),
                                     onPressed: () async {
@@ -340,7 +343,7 @@ class _PatientListScreenState extends State<PatientListScreen> {
 
             return Card(
               margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              color: Colors.teal.shade400,
+              color: primaryColor,
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8)),
               child: ListTile(
@@ -379,8 +382,7 @@ class _PatientListScreenState extends State<PatientListScreen> {
                             ),
                             ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor:
-                                    const Color.fromARGB(255, 0, 121, 107),
+                                backgroundColor: primaryColor,
                                 foregroundColor: Colors.white,
                               ),
                               onPressed: () async {
@@ -474,7 +476,7 @@ class _PatientListScreenState extends State<PatientListScreen> {
                   width: double.infinity,
                   padding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                  color: Colors.teal.shade700,
+                  color: darkerPrimaryColor,
                   child: Text(
                     widget.centerName,
                     style: const TextStyle(
@@ -505,12 +507,12 @@ class _PatientListScreenState extends State<PatientListScreen> {
                       ),
                       const SizedBox(width: 8),
                       IconButton(
-                        icon: const Icon(Icons.person_add, color: Colors.teal),
+                        icon: const Icon(Icons.person_add, color: primaryColor),
                         tooltip: 'Add Patient',
                         onPressed: _showAddPatientDialog,
                       ),
                       IconButton(
-                        icon: const Icon(Icons.archive, color: Colors.teal),
+                        icon: const Icon(Icons.archive, color: primaryColor),
                         tooltip: 'Archived Patients',
                         onPressed: _showArchivedPatientsPopup,
                       ),

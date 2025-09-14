@@ -1,111 +1,309 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'side_menu.dart';
 
-class DoctorDetailScreen extends StatelessWidget {
+class DoctorDetailScreen extends StatefulWidget {
   final String doctorId;
   final String doctorName;
+  final String centerName;
+  final String centerId;
 
   const DoctorDetailScreen({
     super.key,
     required this.doctorId,
     required this.doctorName,
+    required this.centerName,
+    required this.centerId,
   });
 
   @override
-  Widget build(BuildContext context) {
-    final doctorRef =
-        FirebaseFirestore.instance.collection('doctors').doc(doctorId);
+  State<DoctorDetailScreen> createState() => _DoctorDetailScreenState();
+}
 
-    final patientsRef = FirebaseFirestore.instance
-        .collection('patients')
-        .where('doctor_id', isEqualTo: doctorId);
+class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
+  String sortOption = "Name"; // Default sort
+
+  @override
+  Widget build(BuildContext context) {
+    const primaryColor = Color(0xFF056C5B);
+    const darkerPrimaryColor = Color(0xFF045347);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(doctorName),
-        backgroundColor: Colors.blueAccent,
-      ),
-      body: FutureBuilder<DocumentSnapshot>(
-        future: doctorRef.get(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (!snapshot.hasData || !snapshot.data!.exists) {
-            return const Center(child: Text('Doctor not found'));
-          }
+      body: Row(
+        children: [
+          /// Side Menu
+          SideMenu(
+            centerName: widget.centerName,
+            centerId: widget.centerId,
+            selectedMenu: "Doctors",
+          ),
 
-          final doctor = snapshot.data!;
-          final doctorTitle = doctor['title'] ?? '';
-          final doctorPhoto = doctor['photo_url'] ?? '';
-          final doctorAddress = doctor['address'] ?? '';
-          final doctorContact = doctor['contact'] ?? '';
-
-          return Padding(
-            padding: const EdgeInsets.all(16.0),
+          /// Main Content
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 40,
-                      backgroundImage:
-                          doctorPhoto.isNotEmpty ? NetworkImage(doctorPhoto) : null,
-                      child: doctorPhoto.isEmpty ? const Icon(Icons.person, size: 40) : null,
+                /// Header with Center Name
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 16,
+                  ),
+                  color: darkerPrimaryColor,
+                  child: Text(
+                    widget.centerName,
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(doctorName,
-                              style: const TextStyle(
-                                  fontSize: 20, fontWeight: FontWeight.bold)),
-                          Text(doctorTitle),
-                          Text(doctorAddress),
-                          Text(doctorContact),
-                        ],
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-                const SizedBox(height: 24),
-                const Text(
-                  'List of Patients',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
+
+                /// Doctor Info + Patients
                 Expanded(
-                  child: StreamBuilder<QuerySnapshot>(
-                    stream: patientsRef.snapshots(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-                      if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                        return const Center(child: Text('No patients found'));
-                      }
-
-                      final patients = snapshot.data!.docs;
-
-                      return ListView.builder(
-                        itemCount: patients.length,
-                        itemBuilder: (context, index) {
-                          final patient = patients[index];
-                          final patientName = patient['name'] ?? 'No Name';
-                          return ListTile(
-                            title: Text(patientName),
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
+                    child: StreamBuilder<DocumentSnapshot>(
+                      stream:
+                          FirebaseFirestore.instance
+                              .collection('doctor_inCharge')
+                              .doc(widget.doctorId)
+                              .snapshots(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
                           );
-                        },
-                      );
-                    },
+                        }
+                        if (!snapshot.hasData || !snapshot.data!.exists) {
+                          return const Text("Doctor not found.");
+                        }
+
+                        final doctorData =
+                            snapshot.data!.data() as Map<String, dynamic>;
+                        final email = doctorData['email'] ?? '';
+                        final contact = doctorData['contact'] ?? '';
+                        final imageUrl = doctorData['imageUrl'] ?? '';
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            /// Doctor Info Row
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                /// Profile Image (Square)
+                                Container(
+                                  width: 100,
+                                  height: 100,
+                                  decoration: BoxDecoration(
+                                    color: primaryColor.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                    image:
+                                        imageUrl.isNotEmpty
+                                            ? DecorationImage(
+                                              image: NetworkImage(imageUrl),
+                                              fit: BoxFit.cover,
+                                            )
+                                            : null,
+                                  ),
+                                  child:
+                                      imageUrl.isEmpty
+                                          ? Center(
+                                            child: Text(
+                                              widget.doctorName.isNotEmpty
+                                                  ? widget.doctorName[0]
+                                                  : "?",
+                                              style: const TextStyle(
+                                                fontSize: 40,
+                                                fontWeight: FontWeight.bold,
+                                                color: primaryColor,
+                                              ),
+                                            ),
+                                          )
+                                          : null,
+                                ),
+                                const SizedBox(width: 16),
+
+                                /// Doctor Details
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        widget.doctorName,
+                                        style: const TextStyle(
+                                          fontSize: 22,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text("Email: $email"),
+                                      Text("Contact: $contact"),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 24),
+
+                            /// Assigned Patients Section Header
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  "Assigned Patients",
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: primaryColor,
+                                  ),
+                                ),
+
+                                /// Sort Dropdown
+                                DropdownButton<String>(
+                                  value: sortOption,
+                                  items: const [
+                                    DropdownMenuItem(
+                                      value: "Name",
+                                      child: Text("Sort by Name"),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: "Email",
+                                      child: Text("Sort by Email"),
+                                    ),
+                                  ],
+                                  onChanged: (value) {
+                                    if (value != null) {
+                                      setState(() {
+                                        sortOption = value;
+                                      });
+                                    }
+                                  },
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+
+                            /// Patient List
+                            StreamBuilder<QuerySnapshot>(
+                              stream:
+                                  FirebaseFirestore.instance
+                                      .collection('users')
+                                      .where(
+                                        'doctorInCharge',
+                                        isEqualTo: widget.doctorId,
+                                      )
+                                      .snapshots(),
+                              builder: (context, snapshot) {
+                                if (snapshot.connectionState ==
+                                    ConnectionState.waiting) {
+                                  return const Center(
+                                    child: CircularProgressIndicator(),
+                                  );
+                                }
+                                if (!snapshot.hasData ||
+                                    snapshot.data!.docs.isEmpty) {
+                                  return const Text(
+                                    "No patients assigned to this doctor.",
+                                  );
+                                }
+
+                                /// Convert to list and sort
+                                final patients = snapshot.data!.docs.toList();
+                                patients.sort((a, b) {
+                                  if (sortOption == "Name") {
+                                    final firstA =
+                                        (a['firstName'] ?? '')
+                                            .toString()
+                                            .toLowerCase();
+                                    final firstB =
+                                        (b['firstName'] ?? '')
+                                            .toString()
+                                            .toLowerCase();
+                                    final lastA =
+                                        (a['lastName'] ?? '')
+                                            .toString()
+                                            .toLowerCase();
+                                    final lastB =
+                                        (b['lastName'] ?? '')
+                                            .toString()
+                                            .toLowerCase();
+
+                                    // Sort by first name, then last name
+                                    final firstCompare = firstA.compareTo(
+                                      firstB,
+                                    );
+                                    if (firstCompare != 0) return firstCompare;
+                                    return lastA.compareTo(lastB);
+                                  } else {
+                                    final emailA =
+                                        (a['email'] ?? '')
+                                            .toString()
+                                            .toLowerCase();
+                                    final emailB =
+                                        (b['email'] ?? '')
+                                            .toString()
+                                            .toLowerCase();
+                                    return emailA.compareTo(emailB);
+                                  }
+                                });
+
+                                return ListView.builder(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  itemCount: patients.length,
+                                  itemBuilder: (context, index) {
+                                    final patient = patients[index];
+                                    final firstName =
+                                        patient['firstName'] ?? '';
+                                    final lastName = patient['lastName'] ?? '';
+                                    final email = patient['email'] ?? '';
+
+                                    return Card(
+                                      margin: const EdgeInsets.symmetric(
+                                        vertical: 5,
+                                      ),
+                                      child: ListTile(
+                                        leading: const Icon(
+                                          Icons.person,
+                                          color: primaryColor,
+                                        ),
+                                        title: Text(
+                                          "$firstName $lastName",
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        subtitle: Text(
+                                          email,
+                                          style: const TextStyle(
+                                            fontStyle: FontStyle.italic,
+                                          ),
+                                        ),
+                                        onTap: () {
+                                          // 🚧 Future: Add navigation to Patient Detail Screen
+                                        },
+                                      ),
+                                    );
+                                  },
+                                );
+                              },
+                            ),
+                          ],
+                        );
+                      },
+                    ),
                   ),
                 ),
               ],
             ),
-          );
-        },
+          ),
+        ],
       ),
     );
   }

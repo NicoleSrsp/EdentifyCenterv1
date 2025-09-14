@@ -20,6 +20,10 @@ class _HomeScreenState extends State<HomeScreen> {
   final List<String> shifts = ['First', 'Second', 'Third'];
   final List<String> days = ['M', 'T', 'W', 'TH', 'F'];
 
+  // 🔹 Custom brand colors
+  final Color primaryColor = const Color(0xFF056C5B);
+  final Color darkerPrimaryColor = const Color(0xFF045347);
+
   List<Map<String, dynamic>> get weeklyPatients {
     DateTime startOfWeek =
         selectedDate.subtract(Duration(days: selectedDate.weekday - 1));
@@ -93,6 +97,7 @@ class _HomeScreenState extends State<HomeScreen> {
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
           ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: primaryColor),
             onPressed: () {
               if (name.isNotEmpty) {
                 setState(() {
@@ -168,17 +173,38 @@ class _HomeScreenState extends State<HomeScreen> {
       body: Row(
         children: [
           // Permanent Side Menu
-          SideMenu( centerId: widget.centerId, centerName: widget.centerName, selectedMenu: 'Home'),
+          SideMenu(
+            centerId: widget.centerId,
+            centerName: widget.centerName,
+            selectedMenu: 'Home',
+          ),
 
           // Main Content
           Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Top row: date picker + search + add
-                  Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 🔹 Center name header (same style as DoctorsScreen)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  color: darkerPrimaryColor,
+                  child: Text(
+                    widget.centerName,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // 🔹 Top row: date picker + search + add
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
                     children: [
                       GestureDetector(
                         onTap: _pickDate,
@@ -212,20 +238,24 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const SizedBox(width: 8),
                       IconButton(
-                        icon: const Icon(Icons.person_add),
+                        icon: Icon(Icons.person_add, color: primaryColor),
                         onPressed: _addPatient,
                         tooltip: 'Add Patient',
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      child: _buildWeeklyTable(),
-                    ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // 🔹 Weekly patient table
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: _buildWeeklyTable(),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ],
