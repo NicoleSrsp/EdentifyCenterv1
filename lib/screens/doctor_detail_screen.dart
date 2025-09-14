@@ -66,11 +66,10 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(16),
                     child: StreamBuilder<DocumentSnapshot>(
-                      stream:
-                          FirebaseFirestore.instance
-                              .collection('doctor_inCharge')
-                              .doc(widget.doctorId)
-                              .snapshots(),
+                      stream: FirebaseFirestore.instance
+                          .collection('doctor_inCharge')
+                          .doc(widget.doctorId)
+                          .snapshots(),
                       builder: (context, snapshot) {
                         if (snapshot.connectionState ==
                             ConnectionState.waiting) {
@@ -84,7 +83,6 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
 
                         final doctorData =
                             snapshot.data!.data() as Map<String, dynamic>;
-                        final email = doctorData['email'] ?? '';
                         final contact = doctorData['contact'] ?? '';
                         final imageUrl = doctorData['imageUrl'] ?? '';
 
@@ -102,29 +100,27 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                                   decoration: BoxDecoration(
                                     color: primaryColor.withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(8),
-                                    image:
-                                        imageUrl.isNotEmpty
-                                            ? DecorationImage(
-                                              image: NetworkImage(imageUrl),
-                                              fit: BoxFit.cover,
-                                            )
-                                            : null,
-                                  ),
-                                  child:
-                                      imageUrl.isEmpty
-                                          ? Center(
-                                            child: Text(
-                                              widget.doctorName.isNotEmpty
-                                                  ? widget.doctorName[0]
-                                                  : "?",
-                                              style: const TextStyle(
-                                                fontSize: 40,
-                                                fontWeight: FontWeight.bold,
-                                                color: primaryColor,
-                                              ),
-                                            ),
+                                    image: imageUrl.isNotEmpty
+                                        ? DecorationImage(
+                                            image: NetworkImage(imageUrl),
+                                            fit: BoxFit.cover,
                                           )
-                                          : null,
+                                        : null,
+                                  ),
+                                  child: imageUrl.isEmpty
+                                      ? Center(
+                                          child: Text(
+                                            widget.doctorName.isNotEmpty
+                                                ? widget.doctorName[0]
+                                                : "?",
+                                            style: const TextStyle(
+                                              fontSize: 40,
+                                              fontWeight: FontWeight.bold,
+                                              color: primaryColor,
+                                            ),
+                                          ),
+                                        )
+                                      : null,
                                 ),
                                 const SizedBox(width: 16),
 
@@ -142,7 +138,6 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                                         ),
                                       ),
                                       const SizedBox(height: 8),
-                                      Text("Email: $email"),
                                       Text("Contact: $contact"),
                                     ],
                                   ),
@@ -173,8 +168,8 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                                       child: Text("Sort by Name"),
                                     ),
                                     DropdownMenuItem(
-                                      value: "Email",
-                                      child: Text("Sort by Email"),
+                                      value: "Mobile",
+                                      child: Text("Sort by Mobile Number"),
                                     ),
                                   ],
                                   onChanged: (value) {
@@ -191,14 +186,21 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
 
                             /// Patient List
                             StreamBuilder<QuerySnapshot>(
-                              stream:
-                                  FirebaseFirestore.instance
-                                      .collection('users')
-                                      .where(
-                                        'doctorInCharge',
-                                        isEqualTo: widget.doctorId,
-                                      )
-                                      .snapshots(),
+                              stream: FirebaseFirestore.instance
+                                  .collection('users')
+                                  .where(
+                                    'doctorId',
+                                    isEqualTo: widget.doctorId,
+                                  )
+                                  .where(
+                                    'centerId',
+                                    isEqualTo: widget.centerId,
+                                  )
+                                  .where(
+                                    'status',
+                                    isEqualTo: 'active',
+                                  )
+                                  .snapshots(),
                               builder: (context, snapshot) {
                                 if (snapshot.connectionState ==
                                     ConnectionState.waiting) {
@@ -217,52 +219,46 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                                 final patients = snapshot.data!.docs.toList();
                                 patients.sort((a, b) {
                                   if (sortOption == "Name") {
-                                    final firstA =
-                                        (a['firstName'] ?? '')
-                                            .toString()
-                                            .toLowerCase();
-                                    final firstB =
-                                        (b['firstName'] ?? '')
-                                            .toString()
-                                            .toLowerCase();
-                                    final lastA =
-                                        (a['lastName'] ?? '')
-                                            .toString()
-                                            .toLowerCase();
-                                    final lastB =
-                                        (b['lastName'] ?? '')
-                                            .toString()
-                                            .toLowerCase();
+                                    final firstA = (a['firstName'] ?? '')
+                                        .toString()
+                                        .toLowerCase();
+                                    final firstB = (b['firstName'] ?? '')
+                                        .toString()
+                                        .toLowerCase();
+                                    final lastA = (a['lastName'] ?? '')
+                                        .toString()
+                                        .toLowerCase();
+                                    final lastB = (b['lastName'] ?? '')
+                                        .toString()
+                                        .toLowerCase();
 
-                                    // Sort by first name, then last name
-                                    final firstCompare = firstA.compareTo(
-                                      firstB,
-                                    );
+                                    final firstCompare =
+                                        firstA.compareTo(firstB);
                                     if (firstCompare != 0) return firstCompare;
                                     return lastA.compareTo(lastB);
                                   } else {
-                                    final emailA =
-                                        (a['email'] ?? '')
-                                            .toString()
-                                            .toLowerCase();
-                                    final emailB =
-                                        (b['email'] ?? '')
-                                            .toString()
-                                            .toLowerCase();
-                                    return emailA.compareTo(emailB);
+                                    final mobileA = (a['mobileNumber'] ?? '')
+                                        .toString()
+                                        .toLowerCase();
+                                    final mobileB = (b['mobileNumber'] ?? '')
+                                        .toString()
+                                        .toLowerCase();
+                                    return mobileA.compareTo(mobileB);
                                   }
                                 });
 
                                 return ListView.builder(
                                   shrinkWrap: true,
-                                  physics: const NeverScrollableScrollPhysics(),
+                                  physics:
+                                      const NeverScrollableScrollPhysics(),
                                   itemCount: patients.length,
                                   itemBuilder: (context, index) {
                                     final patient = patients[index];
                                     final firstName =
                                         patient['firstName'] ?? '';
                                     final lastName = patient['lastName'] ?? '';
-                                    final email = patient['email'] ?? '';
+                                    final mobileNumber =
+                                        patient['mobileNumber'] ?? '';
 
                                     return Card(
                                       margin: const EdgeInsets.symmetric(
@@ -280,14 +276,11 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                                           ),
                                         ),
                                         subtitle: Text(
-                                          email,
+                                          "Mobile: $mobileNumber",
                                           style: const TextStyle(
                                             fontStyle: FontStyle.italic,
                                           ),
                                         ),
-                                        onTap: () {
-                                          // 🚧 Future: Add navigation to Patient Detail Screen
-                                        },
                                       ),
                                     );
                                   },
