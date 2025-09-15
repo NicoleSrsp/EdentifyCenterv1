@@ -8,6 +8,7 @@ import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/patient_list_screen.dart';
 import 'screens/doctors_screen.dart';
+import 'screens/about_center.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -110,19 +111,34 @@ class EdentifyApp extends StatelessWidget {
               ),
             );
 
-          case '/settings':
+          case '/aboutCenter':
+          final args = settings.arguments as Map<String, dynamic>?;
+          if (args == null ||
+              args['centerName'] == null ||
+              args['address'] == null ||
+              args['contactNumber'] == null ||
+              args['missionVision'] == null ||
+              args['staffInfo'] == null ||
+              args['doctorsInfo'] == null ||
+              args['logoAsset'] == null) {
             return MaterialPageRoute(
               builder: (_) => const Scaffold(
-                body: Center(child: Text('Settings Screen')),
+                body: Center(child: Text('Missing center data')),
               ),
             );
-
-          default:
-            return MaterialPageRoute(
-              builder: (_) => const Scaffold(
-                body: Center(child: Text('Page not found')),
-              ),
-            );
+          }
+          return MaterialPageRoute(
+            builder: (_) => AboutScreen(
+              centerId: args['centerId'],
+              centerName: args['centerName'],
+              address: args['address'],
+              contactNumber: args['contactNumber'],
+              missionVision: args['missionVision'],
+              staffInfo: args['staffInfo'],
+              doctorsInfo: args['doctorsInfo'],
+              logoAsset: args['logoAsset'],
+            ),
+          );
         }
       },
     );

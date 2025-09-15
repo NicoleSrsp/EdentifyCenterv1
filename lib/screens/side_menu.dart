@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'about_center.dart';
 
 class SideMenu extends StatelessWidget {
   final String centerId;
@@ -33,15 +35,48 @@ class SideMenu extends StatelessWidget {
         ),
       ),
       tileColor: selected ? primaryColor : darkerPrimaryColor,
-      onTap: () {
-        Navigator.pushReplacementNamed(
-          context,
-          routeName,
-          arguments: {
-            'centerId': centerId,
-            'centerName': centerName,
-          },
-        );
+      onTap: () async {
+        // If About Center, fetch details from Firebase
+        if (routeName == '/aboutCenter') {
+          final doc = await FirebaseFirestore.instance
+              .collection('centers')
+              .doc(centerId)
+              .get();
+
+          if (!doc.exists) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Center details not found')),
+            );
+            return;
+          }
+
+          final data = doc.data()!;
+
+          Navigator.pushReplacementNamed(
+            context,
+            routeName,
+            arguments: {
+              'centerId': centerId,
+              'centerName': data['centerName'] ?? '',
+              'address': data['address'] ?? '',
+              'contactNumber': data['contactNumber'] ?? '',
+              'missionVision': data['missionVision'] ?? '',
+              'staffInfo': data['staffInfo'] ?? '',
+              'doctorsInfo': data['doctorsInfo'] ?? '',
+              'logoAsset': data['logoAsset'] ?? 'assets/logo.png',
+            },
+          );
+        } else {
+          // Default navigation for other menu items
+          Navigator.pushReplacementNamed(
+            context,
+            routeName,
+            arguments: {
+              'centerId': centerId,
+              'centerName': centerName,
+            },
+          );
+        }
       },
     );
   }
@@ -95,6 +130,13 @@ class SideMenu extends StatelessWidget {
             title: 'Doctors',
             selected: selectedMenu == 'Doctors',
             routeName: '/doctors',
+          ),
+          _buildMenuItem(
+            context: context,
+            icon: Icons.info,
+            title: 'About Center',
+            selected: selectedMenu == 'About Center',
+            routeName: '/aboutCenter',
           ),
           _buildMenuItem(
             context: context,
