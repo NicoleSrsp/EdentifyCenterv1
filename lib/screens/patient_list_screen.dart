@@ -486,8 +486,11 @@ class _PatientListScreenState extends State<PatientListScreen> {
                     context,
                     MaterialPageRoute(
                       builder:
-                          (context) =>
-                              PatientDetailScreen(patientId: patient.id),
+                          (context) => PatientDetailScreen(
+                            patientId: patient.id,
+                            centerId: widget.centerId,
+                            centerName: widget.centerName,
+                          ),
                     ),
                   );
                 },

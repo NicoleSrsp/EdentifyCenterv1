@@ -1,10 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
+import 'side_menu.dart';
 
 class AddPatientRecordScreen extends StatefulWidget {
   final String patientId;
+  final String centerId;
+  final String centerName;
 
-  const AddPatientRecordScreen({super.key, required this.patientId});
+  const AddPatientRecordScreen({
+    super.key,
+    required this.patientId,
+    required this.centerId,
+    required this.centerName,
+  });
 
   @override
   State<AddPatientRecordScreen> createState() => _AddPatientRecordScreenState();
@@ -12,6 +21,7 @@ class AddPatientRecordScreen extends StatefulWidget {
 
 class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
   final _formKey = GlobalKey<FormState>();
+
   final _preWeightController = TextEditingController();
   final _postWeightController = TextEditingController();
   final _ufGoalController = TextEditingController();
@@ -23,6 +33,18 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
   final _o2Controller = TextEditingController();
 
   DateTime _selectedDate = DateTime.now();
+
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null) {
+      setState(() => _selectedDate = picked);
+    }
+  }
 
   Future<void> _saveRecord() async {
     if (!_formKey.currentState!.validate()) return;
@@ -48,39 +70,138 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
         .doc(_selectedDate.toIso8601String().split("T").first)
         .set(record);
 
-    Navigator.pop(context); // go back to PatientDetailScreen
+    Navigator.pop(context);
+  }
+
+  Widget _buildTextField(String label, TextEditingController controller,
+      {TextInputType keyboard = TextInputType.number}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: TextFormField(
+        controller: controller,
+        keyboardType: keyboard,
+        validator: (val) =>
+            val == null || val.isEmpty ? "Enter $label" : null,
+        decoration: InputDecoration(
+          labelText: label,
+          filled: true,
+          fillColor: Colors.grey[100],
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Add Patient Record"), backgroundColor: Colors.teal),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            children: [
-              TextFormField(controller: _preWeightController, decoration: const InputDecoration(labelText: "Pre-Weight")),
-              TextFormField(controller: _postWeightController, decoration: const InputDecoration(labelText: "Post-Weight")),
-              TextFormField(controller: _ufGoalController, decoration: const InputDecoration(labelText: "UF Goal")),
-              TextFormField(controller: _ufRemovedController, decoration: const InputDecoration(labelText: "UF Removed")),
-              TextFormField(controller: _bpController, decoration: const InputDecoration(labelText: "Blood Pressure")),
-              TextFormField(controller: _pulseController, decoration: const InputDecoration(labelText: "Pulse Rate")),
-              TextFormField(controller: _tempController, decoration: const InputDecoration(labelText: "Temperature")),
-              TextFormField(controller: _respirationController, decoration: const InputDecoration(labelText: "Respiration")),
-              TextFormField(controller: _o2Controller, decoration: const InputDecoration(labelText: "Oxygen Saturation")),
-
-              const SizedBox(height: 16),
-
-              ElevatedButton(
-                onPressed: _saveRecord,
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.teal),
-                child: const Text("Save Record"),
-              ),
-            ],
+      body: Row(
+        children: [
+          // 🔹 Side Menu
+          SideMenu(
+            centerId: widget.centerId,
+            centerName: widget.centerName,
+            selectedMenu: "Patients", // ✅ highlight Patients since record belongs there
           ),
-        ),
+
+          // 🔹 Main Content
+          Expanded(
+            child: Scaffold(
+              appBar: AppBar(
+                title: const Text("Add Patient Record"),
+                backgroundColor: Colors.teal,
+                elevation: 2,
+              ),
+              body: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Form(
+                  key: _formKey,
+                  child: ListView(
+                    children: [
+                      // Date Section
+                      Card(
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16)),
+                        child: ListTile(
+                          leading: const Icon(Icons.calendar_today,
+                              color: Colors.teal),
+                          title: Text(
+                              "Date: ${DateFormat.yMMMd().format(_selectedDate)}"),
+                          trailing: TextButton(
+                            onPressed: _pickDate,
+                            child: const Text("Change"),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Dialysis Info Section
+                      Text("Dialysis Information",
+                          style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 8),
+                      Card(
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16)),
+                        elevation: 1,
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            children: [
+                              _buildTextField(
+                                  "Pre-Weight (kg)", _preWeightController),
+                              _buildTextField(
+                                  "Post-Weight (kg)", _postWeightController),
+                              _buildTextField("UF Goal (L)", _ufGoalController),
+                              _buildTextField(
+                                  "UF Removed (L)", _ufRemovedController),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Vital Signs Section
+                      Text("Vital Signs",
+                          style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 8),
+                      Card(
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16)),
+                        elevation: 1,
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            children: [
+                              _buildTextField(
+                                  "Blood Pressure (mmHg)", _bpController),
+                              _buildTextField(
+                                  "Pulse Rate (bpm)", _pulseController),
+                              _buildTextField(
+                                  "Temperature (°C)", _tempController,
+                                  keyboard: const TextInputType.numberWithOptions(
+                                      decimal: true)),
+                              _buildTextField(
+                                  "Respiration Rate", _respirationController),
+                              _buildTextField(
+                                  "Oxygen Saturation (%)", _o2Controller),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 80),
+                    ],
+                  ),
+                ),
+              ),
+              floatingActionButton: FloatingActionButton.extended(
+                onPressed: _saveRecord,
+                backgroundColor: Colors.teal,
+                icon: const Icon(Icons.save),
+                label: const Text("Save Record"),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
