@@ -94,7 +94,7 @@ class SideMenu extends StatelessWidget {
               children: [
                 SizedBox(
                   width: 60,
-                  height: 60,
+                  height: 40,
                   child: Image.asset('assets/logo.png', fit: BoxFit.contain),
                 ),
                 const SizedBox(width: 12),
@@ -106,10 +106,16 @@ class SideMenu extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
+                const SizedBox(width: 12),
+      const VerticalDivider(
+        color: Colors.white,
+        thickness: 1,
+        width: 20,
+      )
               ],
             ),
           ),
-          const Divider(color: Colors.white, height: 2),
+
           _buildMenuItem(
             context: context,
             icon: Icons.home,
