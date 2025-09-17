@@ -47,41 +47,58 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
   }
 
   Future<void> _saveRecord() async {
-    if (!_formKey.currentState!.validate()) return;
+    final Map<String, dynamic> record = {};
 
-    final record = {
-      "preWeight": _preWeightController.text,
-      "postWeight": _postWeightController.text,
-      "ufGoal": _ufGoalController.text,
-      "ufRemoved": _ufRemovedController.text,
-      "bloodPressure": _bpController.text,
-      "pulseRate": _pulseController.text,
-      "temperature": _tempController.text,
-      "respiration": _respirationController.text,
-      "oxygenSaturation": _o2Controller.text,
-      "date": _selectedDate.toIso8601String().split("T").first,
-      "createdAt": FieldValue.serverTimestamp(),
-    };
+    void addIfNotEmpty(
+      String key,
+      TextEditingController controller, {
+      bool isNumber = false,
+    }) {
+      if (controller.text.trim().isNotEmpty) {
+        record[key] =
+            isNumber
+                ? double.tryParse(controller.text.trim()) ??
+                    controller.text.trim()
+                : controller.text.trim();
+      }
+    }
 
+    // Add fields (numbers parsed properly)
+    addIfNotEmpty("preWeight", _preWeightController, isNumber: true);
+    addIfNotEmpty("postWeight", _postWeightController, isNumber: true);
+    addIfNotEmpty("ufGoal", _ufGoalController, isNumber: true);
+    addIfNotEmpty("ufRemoved", _ufRemovedController, isNumber: true);
+    addIfNotEmpty("bloodPressure", _bpController);
+    addIfNotEmpty("pulseRate", _pulseController, isNumber: true);
+    addIfNotEmpty("temperature", _tempController, isNumber: true);
+    addIfNotEmpty("respiration", _respirationController, isNumber: true);
+    addIfNotEmpty("oxygenSaturation", _o2Controller, isNumber: true);
+
+    // Always include date & createdAt
+    record["date"] = _selectedDate.toIso8601String().split("T").first;
+    record["createdAt"] = FieldValue.serverTimestamp();
+
+    // Save with merge (so updates don’t delete old fields)
     await FirebaseFirestore.instance
         .collection("users")
         .doc(widget.patientId)
         .collection("records")
         .doc(_selectedDate.toIso8601String().split("T").first)
-        .set(record);
+        .set(record, SetOptions(merge: true));
 
     Navigator.pop(context);
   }
 
-  Widget _buildTextField(String label, TextEditingController controller,
-      {TextInputType keyboard = TextInputType.number}) {
+  Widget _buildTextField(
+    String label,
+    TextEditingController controller, {
+    TextInputType keyboard = TextInputType.number,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: TextFormField(
         controller: controller,
         keyboardType: keyboard,
-        validator: (val) =>
-            val == null || val.isEmpty ? "Enter $label" : null,
         decoration: InputDecoration(
           labelText: label,
           filled: true,
@@ -101,7 +118,8 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
           SideMenu(
             centerId: widget.centerId,
             centerName: widget.centerName,
-            selectedMenu: "Patients", // ✅ highlight Patients since record belongs there
+            selectedMenu:
+                "Patients", // ✅ highlight Patients since record belongs there
           ),
 
           // 🔹 Main Content
@@ -121,12 +139,16 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
                       // Date Section
                       Card(
                         shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16)),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                         child: ListTile(
-                          leading: const Icon(Icons.calendar_today,
-                              color: Colors.teal),
+                          leading: const Icon(
+                            Icons.calendar_today,
+                            color: Colors.teal,
+                          ),
                           title: Text(
-                              "Date: ${DateFormat.yMMMd().format(_selectedDate)}"),
+                            "Date: ${DateFormat.yMMMd().format(_selectedDate)}",
+                          ),
                           trailing: TextButton(
                             onPressed: _pickDate,
                             child: const Text("Change"),
@@ -136,24 +158,33 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
                       const SizedBox(height: 12),
 
                       // Dialysis Info Section
-                      Text("Dialysis Information",
-                          style: Theme.of(context).textTheme.titleMedium),
+                      Text(
+                        "Dialysis Information",
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
                       const SizedBox(height: 8),
                       Card(
                         shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16)),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                         elevation: 1,
                         child: Padding(
                           padding: const EdgeInsets.all(12),
                           child: Column(
                             children: [
                               _buildTextField(
-                                  "Pre-Weight (kg)", _preWeightController),
+                                "Pre-Weight (kg)",
+                                _preWeightController,
+                              ),
                               _buildTextField(
-                                  "Post-Weight (kg)", _postWeightController),
+                                "Post-Weight (kg)",
+                                _postWeightController,
+                              ),
                               _buildTextField("UF Goal (L)", _ufGoalController),
                               _buildTextField(
-                                  "UF Removed (L)", _ufRemovedController),
+                                "UF Removed (L)",
+                                _ufRemovedController,
+                              ),
                             ],
                           ),
                         ),
@@ -161,29 +192,43 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
                       const SizedBox(height: 16),
 
                       // Vital Signs Section
-                      Text("Vital Signs",
-                          style: Theme.of(context).textTheme.titleMedium),
+                      Text(
+                        "Vital Signs",
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
                       const SizedBox(height: 8),
                       Card(
                         shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16)),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                         elevation: 1,
                         child: Padding(
                           padding: const EdgeInsets.all(12),
                           child: Column(
                             children: [
                               _buildTextField(
-                                  "Blood Pressure (mmHg)", _bpController),
+                                "Blood Pressure (mmHg)",
+                                _bpController,
+                              ),
                               _buildTextField(
-                                  "Pulse Rate (bpm)", _pulseController),
+                                "Pulse Rate (bpm)",
+                                _pulseController,
+                              ),
                               _buildTextField(
-                                  "Temperature (°C)", _tempController,
-                                  keyboard: const TextInputType.numberWithOptions(
-                                      decimal: true)),
+                                "Temperature (°C)",
+                                _tempController,
+                                keyboard: const TextInputType.numberWithOptions(
+                                  decimal: true,
+                                ),
+                              ),
                               _buildTextField(
-                                  "Respiration Rate", _respirationController),
+                                "Respiration Rate",
+                                _respirationController,
+                              ),
                               _buildTextField(
-                                  "Oxygen Saturation (%)", _o2Controller),
+                                "Oxygen Saturation (%)",
+                                _o2Controller,
+                              ),
                             ],
                           ),
                         ),
