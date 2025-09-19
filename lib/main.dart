@@ -44,31 +44,23 @@ class EdentifyApp extends StatelessWidget {
           case '/login':
             final args = settings.arguments as Map<String, dynamic>?;
             if (args == null ||
-                args['centerName'] == null ||
-                args['centerId'] == null) {
-              return MaterialPageRoute(
-                builder: (_) => const Scaffold(
-                  body: Center(child: Text('Missing center data')),
-                ),
-              );
+                args['centerId'] == null ||
+                args['centerName'] == null) {
+              return _missingDataScreen('login');
             }
             return MaterialPageRoute(
               builder: (_) => CenterLoginScreen(
-                centerName: args['centerName'],
                 centerId: args['centerId'],
+                centerName: args['centerName'],
               ),
             );
 
           case '/home':
             final args = settings.arguments as Map<String, dynamic>?;
             if (args == null ||
-                args['centerName'] == null ||
-                args['centerId'] == null) {
-              return MaterialPageRoute(
-                builder: (_) => const Scaffold(
-                  body: Center(child: Text('Missing center data')),
-                ),
-              );
+                args['centerId'] == null ||
+                args['centerName'] == null) {
+              return _missingDataScreen('home');
             }
             return MaterialPageRoute(
               builder: (_) => HomeScreen(
@@ -80,13 +72,9 @@ class EdentifyApp extends StatelessWidget {
           case '/patients':
             final args = settings.arguments as Map<String, dynamic>?;
             if (args == null ||
-                args['centerName'] == null ||
-                args['centerId'] == null) {
-              return MaterialPageRoute(
-                builder: (_) => const Scaffold(
-                  body: Center(child: Text('Missing center data')),
-                ),
-              );
+                args['centerId'] == null ||
+                args['centerName'] == null) {
+              return _missingDataScreen('patients');
             }
             return MaterialPageRoute(
               builder: (_) => PatientListScreen(
@@ -97,50 +85,49 @@ class EdentifyApp extends StatelessWidget {
 
           case '/doctors':
             final args = settings.arguments as Map<String, dynamic>?;
-            if (args == null || args['centerName'] == null) {
-              return MaterialPageRoute(
-                builder: (_) => const Scaffold(
-                  body: Center(child: Text('Missing center data')),
-                ),
-              );
+            if (args == null ||
+                args['centerId'] == null ||
+                args['centerName'] == null) {
+              return _missingDataScreen('doctors');
             }
             return MaterialPageRoute(
               builder: (_) => DoctorsScreen(
+                centerId: args['centerId'],
                 centerName: args['centerName'],
-                centerId: args['centerId']
               ),
             );
 
           case '/aboutCenter':
-          final args = settings.arguments as Map<String, dynamic>?;
-          if (args == null ||
-              args['centerName'] == null ||
-              args['address'] == null ||
-              args['contactNumber'] == null ||
-              args['missionVision'] == null ||
-              args['staffInfo'] == null ||
-              args['doctorsInfo'] == null ||
-              args['logoAsset'] == null) {
+            final args = settings.arguments as Map<String, dynamic>?;
+            if (args == null ||
+                args['centerId'] == null ||
+                args['centerName'] == null) {
+              return _missingDataScreen('about center');
+            }
             return MaterialPageRoute(
-              builder: (_) => const Scaffold(
-                body: Center(child: Text('Missing center data')),
+              builder: (_) => AboutScreen(
+                centerId: args['centerId'],
+                centerName: args['centerName'],
               ),
             );
-          }
-          return MaterialPageRoute(
-            builder: (_) => AboutScreen(
-              centerId: args['centerId'],
-              centerName: args['centerName'],
-              address: args['address'],
-              contactNumber: args['contactNumber'],
-              missionVision: args['missionVision'],
-              staffInfo: args['staffInfo'],
-              doctorsInfo: args['doctorsInfo'],
-              logoAsset: args['logoAsset'],
-            ),
-          );
+
+          default:
+            return MaterialPageRoute(
+              builder: (_) => const Scaffold(
+                body: Center(child: Text('Route not found')),
+              ),
+            );
         }
       },
+    );
+  }
+
+  /// Small helper so we don’t repeat the same error code everywhere
+  MaterialPageRoute _missingDataScreen(String screenName) {
+    return MaterialPageRoute(
+      builder: (_) => Scaffold(
+        body: Center(child: Text('Missing center data for $screenName')),
+      ),
     );
   }
 }

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'about_center.dart';
 
 class SideMenu extends StatelessWidget {
   final String centerId;
@@ -57,12 +56,10 @@ class SideMenu extends StatelessWidget {
             routeName,
             arguments: {
               'centerId': centerId,
-              'centerName': data['centerName'] ?? '',
+              'centerName': centerName, // ✅ keep original name
               'address': data['address'] ?? '',
               'contactNumber': data['contactNumber'] ?? '',
               'missionVision': data['missionVision'] ?? '',
-              'staffInfo': data['staffInfo'] ?? '',
-              'doctorsInfo': data['doctorsInfo'] ?? '',
               'logoAsset': data['logoAsset'] ?? 'assets/logo.png',
             },
           );
@@ -73,7 +70,7 @@ class SideMenu extends StatelessWidget {
             routeName,
             arguments: {
               'centerId': centerId,
-              'centerName': centerName,
+              'centerName': centerName, // ✅ always keep this consistent
             },
           );
         }
@@ -107,11 +104,11 @@ class SideMenu extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
-      const VerticalDivider(
-        color: Colors.white,
-        thickness: 1,
-        width: 20,
-      )
+                const VerticalDivider(
+                  color: Colors.white,
+                  thickness: 1,
+                  width: 20,
+                )
               ],
             ),
           ),
