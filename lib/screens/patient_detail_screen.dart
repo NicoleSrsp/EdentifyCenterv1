@@ -129,7 +129,7 @@ class PatientDetailScreen extends StatelessWidget {
                                       _buildInfoRow(
                                         Icons.phone,
                                         "Contact",
-                                        data['mobileNumber'] ?? 'N/A',
+                                        data['phone'] ?? 'N/A',
                                       ),
                                       _buildInfoRow(
                                         Icons.medical_services,

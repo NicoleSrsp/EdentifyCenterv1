@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class CenterSelectionScreen extends StatefulWidget {
   const CenterSelectionScreen({super.key});
@@ -17,6 +19,7 @@ class _CenterSelectionScreenState extends State<CenterSelectionScreen> {
   @override
   void initState() {
     super.initState();
+    _checkPersistentLogin();
     fetchCenters();
   }
 
@@ -39,6 +42,31 @@ class _CenterSelectionScreenState extends State<CenterSelectionScreen> {
         SnackBar(content: Text('Failed to fetch centers: $e')),
       );
     }
+  }
+
+  // Check persistent login
+  Future<void> _checkPersistentLogin() async {
+    final prefs = await SharedPreferences.getInstance();
+    final centerId = prefs.getString('centerId');
+    final centerName = prefs.getString('centerName');
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (centerId != null && centerName != null && user != null) {
+      // User is logged in and center selected → navigate to home
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.pushReplacementNamed(
+          context,
+          '/home',
+          arguments: {'centerId': centerId, 'centerName': centerName},
+        );
+      });
+    }
+  }
+
+  Future<void> _saveSelectedCenter() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('centerId', selectedCenterId!);
+    await prefs.setString('centerName', selectedDialysisCenter!);
   }
 
   @override
@@ -97,7 +125,7 @@ class _CenterSelectionScreenState extends State<CenterSelectionScreen> {
                                       .firstWhere((c) => c['centerName'] == value)['centerId'] as String;
                                 });
                               },
-                            )
+                            ),
                           ),
                           const SizedBox(height: 20),
                           ElevatedButton(
@@ -108,7 +136,8 @@ class _CenterSelectionScreenState extends State<CenterSelectionScreen> {
                             ),
                             onPressed: (selectedDialysisCenter == null || selectedCenterId == null)
                                 ? null
-                                : () {
+                                : () async {
+                                    await _saveSelectedCenter();
                                     Navigator.pushNamed(
                                       context,
                                       '/login',

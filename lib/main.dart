@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 
-import 'screens/landing_page.dart';
 import 'screens/center_selection.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/patient_list_screen.dart';
 import 'screens/doctors_screen.dart';
 import 'screens/about_center.dart';
+import 'screens/auth_wrapper.dart'; // <-- import AuthWrapper
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -31,10 +31,11 @@ class EdentifyApp extends StatelessWidget {
           secondary: Colors.amber.shade600,
         ),
       ),
+      home: const AuthWrapper(), // <-- centralized auth check on startup
       onGenerateRoute: (settings) {
         switch (settings.name) {
           case '/':
-            return MaterialPageRoute(builder: (_) => const LandingPage());
+            return MaterialPageRoute(builder: (_) => const HomeScreen(centerId: '', centerName: '',));
 
           case '/centerSelection':
             return MaterialPageRoute(

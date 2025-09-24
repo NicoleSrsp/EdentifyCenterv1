@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class CenterLoginScreen extends StatefulWidget {
   final String centerName;
   final String centerId;
 
-  const CenterLoginScreen({super.key,  required this.centerName, required this.centerId});
+  const CenterLoginScreen({super.key, required this.centerName, required this.centerId});
 
   @override
   State<CenterLoginScreen> createState() => _CenterLoginScreenState();
@@ -16,6 +17,7 @@ class _CenterLoginScreenState extends State<CenterLoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+
   bool _isLoading = false;
   bool _obscurePassword = true;
   String _errorText = '';
@@ -27,6 +29,7 @@ class _CenterLoginScreenState extends State<CenterLoginScreen> {
   void initState() {
     super.initState();
     _fetchCenterName();
+    _checkCurrentUser();
   }
 
   Future<void> _fetchCenterName() async {
@@ -38,6 +41,22 @@ class _CenterLoginScreenState extends State<CenterLoginScreen> {
       setState(() {
         _centerName = (doc.data() as Map<String, dynamic>)['name'] ?? '';
       });
+    }
+  }
+
+  // Persistent login check
+  Future<void> _checkCurrentUser() async {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('centerId', widget.centerId);
+      await prefs.setString('centerName', _centerName);
+
+      Navigator.pushReplacementNamed(
+        context,
+        '/home',
+        arguments: {'centerId': widget.centerId, 'centerName': _centerName},
+      );
     }
   }
 
@@ -57,11 +76,7 @@ class _CenterLoginScreenState extends State<CenterLoginScreen> {
     });
 
     try {
-      // 1. Check if center user exists by centerId
-      final docRef = FirebaseFirestore.instance
-          .collection('centers')
-          .doc(widget.centerId);
-
+      final docRef = FirebaseFirestore.instance.collection('centers').doc(widget.centerId);
       final doc = await docRef.get();
 
       if (!doc.exists) {
@@ -82,7 +97,6 @@ class _CenterLoginScreenState extends State<CenterLoginScreen> {
             message: 'Account locked. Contact administrator.');
       }
 
-      // 2. Authenticate using Firebase Auth
       try {
         await FirebaseAuth.instance.signInWithEmailAndPassword(
           email: _emailController.text.trim(),
@@ -90,7 +104,6 @@ class _CenterLoginScreenState extends State<CenterLoginScreen> {
         );
       } on FirebaseAuthException catch (e) {
         if (e.code == 'user-not-found') {
-          // Create new account if not exists
           await FirebaseAuth.instance.createUserWithEmailAndPassword(
             email: _emailController.text.trim(),
             password: _passwordController.text.trim(),
@@ -100,18 +113,18 @@ class _CenterLoginScreenState extends State<CenterLoginScreen> {
         }
       }
 
-      // Reset login attempts
       _loginAttempts = 0;
 
-      // Navigate based on first login
+      // Save center info for persistent login
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('centerId', widget.centerId);
+      await prefs.setString('centerName', _centerName);
+
       if (isFirstLogin) {
         Navigator.pushReplacementNamed(
           context,
           '/changePassword',
-          arguments: {
-            'centerId': widget.centerId,
-            'centerName': _centerName,
-          },
+          arguments: {'centerId': widget.centerId, 'centerName': _centerName},
         );
       } else {
         Navigator.pushReplacementNamed(
@@ -161,9 +174,7 @@ class _CenterLoginScreenState extends State<CenterLoginScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        _centerName.isEmpty
-                            ? "Logging in..."
-                            : "Logging into: $_centerName",
+                        _centerName.isEmpty ? "Logging in..." : "Logging into: $_centerName",
                         style: const TextStyle(
                           fontSize: 18,
                           color: Colors.white,
@@ -184,9 +195,7 @@ class _CenterLoginScreenState extends State<CenterLoginScreen> {
                         ),
                         keyboardType: TextInputType.emailAddress,
                         validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter your email';
-                          }
+                          if (value == null || value.isEmpty) return 'Please enter your email';
                           if (!value.contains('@')) return 'Enter a valid email';
                           return null;
                         },
@@ -200,9 +209,7 @@ class _CenterLoginScreenState extends State<CenterLoginScreen> {
                           prefixIcon: const Icon(Icons.lock),
                           suffixIcon: IconButton(
                             icon: Icon(
-                              _obscurePassword
-                                  ? Icons.visibility
-                                  : Icons.visibility_off,
+                              _obscurePassword ? Icons.visibility : Icons.visibility_off,
                             ),
                             onPressed: () {
                               setState(() {
@@ -217,9 +224,7 @@ class _CenterLoginScreenState extends State<CenterLoginScreen> {
                           ),
                         ),
                         validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter your password';
-                          }
+                          if (value == null || value.isEmpty) return 'Please enter your password';
                           if (value.length < 6) return 'Password must be at least 6 characters';
                           return null;
                         },

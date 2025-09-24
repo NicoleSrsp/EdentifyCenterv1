@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'side_menu.dart';
-import 'package:crypto/crypto.dart';
-import 'dart:convert';
 import 'patient_detail_screen.dart';
 
 class PatientListScreen extends StatefulWidget {
@@ -48,13 +47,20 @@ class _PatientListScreenState extends State<PatientListScreen> {
   /// Pop-up dialog to add new patient
   void _showAddPatientDialog() {
     final TextEditingController firstNameController = TextEditingController();
+    final TextEditingController middleNameController = TextEditingController();
     final TextEditingController lastNameController = TextEditingController();
-    final TextEditingController mobileController = TextEditingController();
+    final TextEditingController birthdayController = TextEditingController();
+    final TextEditingController phoneController = TextEditingController();
+    final TextEditingController emailController = TextEditingController();
+    final TextEditingController addressController = TextEditingController();
+    final TextEditingController startDateController = TextEditingController();
+    final TextEditingController healthController = TextEditingController();
     final TextEditingController passwordController = TextEditingController();
     final TextEditingController confirmPasswordController =
         TextEditingController();
 
     String? selectedDoctorId;
+    String? selectedDoctorName;
 
     showDialog(
       context: context,
@@ -70,13 +76,41 @@ class _PatientListScreenState extends State<PatientListScreen> {
                   decoration: const InputDecoration(labelText: 'First Name'),
                 ),
                 TextField(
+                  controller: middleNameController,
+                  decoration: const InputDecoration(labelText: 'Middle Name'),
+                ),
+                TextField(
                   controller: lastNameController,
                   decoration: const InputDecoration(labelText: 'Last Name'),
                 ),
                 TextField(
-                  controller: mobileController,
-                  decoration: const InputDecoration(labelText: 'Mobile Number'),
+                  controller: birthdayController,
+                  decoration:
+                      const InputDecoration(labelText: 'Birthday (YYYY-MM-DD)'),
+                ),
+                TextField(
+                  controller: phoneController,
+                  decoration: const InputDecoration(labelText: 'Phone Number'),
                   keyboardType: TextInputType.phone,
+                ),
+                TextField(
+                  controller: emailController,
+                  decoration: const InputDecoration(labelText: 'Email'),
+                  keyboardType: TextInputType.emailAddress,
+                ),
+                TextField(
+                  controller: addressController,
+                  decoration: const InputDecoration(labelText: 'Address'),
+                ),
+                TextField(
+                  controller: startDateController,
+                  decoration: const InputDecoration(
+                      labelText: 'Start of Treatment (YYYY-MM-DD)'),
+                ),
+                TextField(
+                  controller: healthController,
+                  decoration:
+                      const InputDecoration(labelText: 'Health Condition(s)'),
                 ),
                 TextField(
                   controller: passwordController,
@@ -85,23 +119,17 @@ class _PatientListScreenState extends State<PatientListScreen> {
                 ),
                 TextField(
                   controller: confirmPasswordController,
-                  decoration: const InputDecoration(
-                    labelText: 'Confirm Password',
-                  ),
+                  decoration:
+                      const InputDecoration(labelText: 'Confirm Password'),
                   obscureText: true,
                 ),
-
                 const SizedBox(height: 16),
                 // Dropdown for doctors under this center
                 StreamBuilder<QuerySnapshot>(
-                  stream:
-                      FirebaseFirestore.instance
-                          .collection('doctor_inCharge')
-                          .where(
-                            'centerId',
-                            isEqualTo: widget.centerId,
-                          ) // match current center
-                          .snapshots(),
+                  stream: FirebaseFirestore.instance
+                      .collection('doctor_inCharge')
+                      .where('centerId', isEqualTo: widget.centerId)
+                      .snapshots(),
                   builder: (context, snapshot) {
                     if (!snapshot.hasData) {
                       return const CircularProgressIndicator();
@@ -114,20 +142,24 @@ class _PatientListScreenState extends State<PatientListScreen> {
                     }
 
                     return DropdownButtonFormField<String>(
-                      decoration: const InputDecoration(
-                        labelText: "Assign Doctor",
-                      ),
-                      value: selectedDoctorId,
-                      items:
-                          docs.map((doc) {
-                            final data = doc.data() as Map<String, dynamic>;
-                            return DropdownMenuItem<String>(
-                              value: doc.id,
-                              child: Text(data['name'] ?? "No Name"),
-                            );
-                          }).toList(),
+                      decoration:
+                          const InputDecoration(labelText: "Assign Doctor"),
+                      initialValue: selectedDoctorId,
+                      items: docs.map((doc) {
+                        final data = doc.data() as Map<String, dynamic>;
+                        return DropdownMenuItem<String>(
+                          value: doc.id,
+                          child: Text(data['name'] ?? "No Name"),
+                        );
+                      }).toList(),
                       onChanged: (value) {
-                        selectedDoctorId = value;
+                        if (value != null) {
+                          selectedDoctorId = value;
+                          final doctorDoc =
+                              docs.firstWhere((d) => d.id == value);
+                          selectedDoctorName =
+                              (doctorDoc.data() as Map<String, dynamic>)['name'];
+                        }
                       },
                     );
                   },
@@ -142,39 +174,99 @@ class _PatientListScreenState extends State<PatientListScreen> {
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color.fromARGB(255, 0, 121, 107),
+                backgroundColor: primaryColor,
                 foregroundColor: Colors.white,
               ),
               onPressed: () async {
                 final firstName = firstNameController.text.trim();
+                final middleName = middleNameController.text.trim();
                 final lastName = lastNameController.text.trim();
-                final mobile = mobileController.text.trim();
+                final birthday = birthdayController.text.trim();
+                final phone = phoneController.text.trim();
+                final email = emailController.text.trim();
+                final address = addressController.text.trim();
+                final startDate = startDateController.text.trim();
+                final health = healthController.text.trim();
                 final password = passwordController.text.trim();
+                final confirmPassword =
+                    confirmPasswordController.text.trim();
 
-                if (selectedDoctorId == null) {
+                if (firstName.isEmpty ||
+                    lastName.isEmpty ||
+                    birthday.isEmpty ||
+                    phone.isEmpty ||
+                    address.isEmpty ||
+                    startDate.isEmpty ||
+                    health.isEmpty ||
+                    password.isEmpty ||
+                    email.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Please assign a doctor.")),
+                    const SnackBar(
+                        content: Text("All fields are required.")),
                   );
                   return;
                 }
 
-                // Hash password using SHA-256
-                final hashedPassword =
-                    sha256.convert(utf8.encode(password)).toString();
+                if (password != confirmPassword) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text("Passwords do not match.")),
+                  );
+                  return;
+                }
 
-                // Add patient to Firestore
-                await FirebaseFirestore.instance.collection('users').add({
-                  'firstName': firstName,
-                  'lastName': lastName,
-                  'mobileNumber': mobile,
-                  'password': hashedPassword,
-                  'centerId': widget.centerId,
-                  'doctorId': selectedDoctorId,
-                  'status': 'active',
-                  'createdAt': FieldValue.serverTimestamp(),
-                });
+                if (selectedDoctorId == null || selectedDoctorName == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text("Please assign a doctor.")),
+                  );
+                  return;
+                }
 
-                Navigator.pop(context);
+                try {
+                  // ✅ Create patient account in FirebaseAuth
+                  UserCredential cred = await FirebaseAuth.instance
+                      .createUserWithEmailAndPassword(
+                          email: email, password: password);
+
+                  final uid = cred.user!.uid;
+
+                  // ✅ Save patient profile in Firestore
+                  await FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(uid)
+                      .set({
+                    'firstName': firstName,
+                    'middleName': middleName,
+                    'lastName': lastName,
+                    'birthday': birthday,
+                    'phone': phone,
+                    'email': email,
+                    'address': address,
+                    'startDate': startDate,
+                    'healthConditions': health,
+                    'centerId': widget.centerId,
+                    'centerName': widget.centerName,
+                    'doctorId': selectedDoctorId,
+                    'doctorName': selectedDoctorName,
+                    'status': 'active',
+                    'createdAt': FieldValue.serverTimestamp(),
+                  });
+
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text("Patient added successfully.")),
+                  );
+                } on FirebaseAuthException catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text("Auth error: ${e.message}")),
+                  );
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text("Error: $e")),
+                  );
+                }
               },
               child: const Text('Add'),
             ),
@@ -194,12 +286,11 @@ class _PatientListScreenState extends State<PatientListScreen> {
           content: SizedBox(
             width: 500,
             child: StreamBuilder<QuerySnapshot>(
-              stream:
-                  FirebaseFirestore.instance
-                      .collection('users')
-                      .where('centerId', isEqualTo: widget.centerId)
-                      .where('status', isEqualTo: 'archived')
-                      .snapshots(),
+              stream: FirebaseFirestore.instance
+                  .collection('users')
+                  .where('centerId', isEqualTo: widget.centerId)
+                  .where('status', isEqualTo: 'archived')
+                  .snapshots(),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) return const CircularProgressIndicator();
                 final docs = snapshot.data!.docs;
@@ -221,92 +312,15 @@ class _PatientListScreenState extends State<PatientListScreen> {
                                 .collection('users')
                                 .doc(docs[index].id)
                                 .update({'status': 'active'});
-                          } else if (value == 'rename') {
-                            final TextEditingController renameController =
-                                TextEditingController(text: fullName);
-                            showDialog(
-                              context: context,
-                              builder:
-                                  (context) => AlertDialog(
-                                    title: const Text('Rename Patient'),
-                                    content: TextField(
-                                      controller: renameController,
-                                      decoration: const InputDecoration(
-                                        labelText: 'Full Name',
-                                      ),
-                                    ),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () => Navigator.pop(context),
-                                        child: const Text('Cancel'),
-                                      ),
-                                      ElevatedButton(
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: primaryColor,
-                                          foregroundColor: Colors.white,
-                                        ),
-                                        onPressed: () async {
-                                          final fullName =
-                                              renameController.text.trim();
-
-                                          String last = '';
-                                          String first = '';
-
-                                          if (fullName.contains(',')) {
-                                            final parts = fullName.split(',');
-                                            last = parts[0].trim();
-                                            first =
-                                                parts.length > 1
-                                                    ? parts[1].trim()
-                                                    : '';
-                                          } else {
-                                            final parts = fullName.split(' ');
-                                            last = parts[0].trim();
-                                            first =
-                                                parts.length > 1
-                                                    ? parts
-                                                        .sublist(1)
-                                                        .join(' ')
-                                                        .trim()
-                                                    : '';
-                                          }
-
-                                          await FirebaseFirestore.instance
-                                              .collection('users')
-                                              .doc(docs[index].id)
-                                              .update({
-                                                'firstName': first,
-                                                'lastName': last,
-                                              });
-
-                                          Navigator.pop(
-                                            context,
-                                          ); // closes rename popup
-                                        },
-                                        child: const Text('Save'),
-                                      ),
-                                    ],
-                                  ),
-                            );
                           }
                         },
-                        itemBuilder:
-                            (context) => [
-                              const PopupMenuItem(
-                                value: 'restore',
-                                child: Text(
-                                  'Restore',
-                                  style: TextStyle(color: Colors.black),
-                                ),
-                              ),
-                              const PopupMenuItem(
-                                value: 'rename',
-                                child: Text(
-                                  'Rename',
-                                  style: TextStyle(color: Colors.black),
-                                ),
-                              ),
-                            ],
+                        itemBuilder: (context) => [
+                          const PopupMenuItem(
+                            value: 'restore',
+                            child: Text('Restore',
+                                style: TextStyle(color: Colors.black)),
+                          ),
+                        ],
                       ),
                     );
                   },
@@ -327,12 +341,11 @@ class _PatientListScreenState extends State<PatientListScreen> {
 
   Widget _buildPatientList() {
     return StreamBuilder<QuerySnapshot>(
-      stream:
-          FirebaseFirestore.instance
-              .collection('users')
-              .where('centerId', isEqualTo: widget.centerId)
-              .where('status', isEqualTo: 'active')
-              .snapshots(),
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .where('centerId', isEqualTo: widget.centerId)
+          .where('status', isEqualTo: 'active')
+          .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return const Center(child: Text('Error loading patients.'));
@@ -344,12 +357,11 @@ class _PatientListScreenState extends State<PatientListScreen> {
         var docs = snapshot.data!.docs;
 
         if (_searchText.isNotEmpty) {
-          docs =
-              docs.where((doc) {
-                final data = doc.data() as Map<String, dynamic>;
-                final name = _getFullName(data).toLowerCase();
-                return name.contains(_searchText);
-              }).toList();
+          docs = docs.where((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            final name = _getFullName(data).toLowerCase();
+            return name.contains(_searchText);
+          }).toList();
         }
 
         docs.sort((a, b) {
@@ -376,15 +388,12 @@ class _PatientListScreenState extends State<PatientListScreen> {
               margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               color: primaryColor,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
+                  borderRadius: BorderRadius.circular(8)),
               child: ListTile(
                 title: Text(
                   fullName,
                   style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
+                      color: Colors.white, fontWeight: FontWeight.w600),
                 ),
                 trailing: PopupMenuButton<String>(
                   icon: const Icon(Icons.more_vert, color: Colors.white),
@@ -394,103 +403,25 @@ class _PatientListScreenState extends State<PatientListScreen> {
                           .collection('users')
                           .doc(patient.id)
                           .update({'status': 'archived'});
-                    } else if (value == 'rename') {
-                      final TextEditingController renameController =
-                          TextEditingController(text: fullName);
-                      showDialog(
-                        context: context,
-                        builder:
-                            (context) => AlertDialog(
-                              title: const Text('Rename Patient'),
-                              content: TextField(
-                                controller: renameController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Full Name',
-                                ),
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  child: const Text('Cancel'),
-                                ),
-                                ElevatedButton(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: primaryColor,
-                                    foregroundColor: Colors.white,
-                                  ),
-                                  onPressed: () async {
-                                    final fullName =
-                                        renameController.text.trim();
-
-                                    String last = '';
-                                    String first = '';
-
-                                    if (fullName.contains(',')) {
-                                      final parts = fullName.split(',');
-                                      last = parts[0].trim();
-                                      first =
-                                          parts.length > 1
-                                              ? parts[1].trim()
-                                              : '';
-                                    } else {
-                                      final parts = fullName.split(' ');
-                                      last = parts[0].trim();
-                                      first =
-                                          parts.length > 1
-                                              ? parts
-                                                  .sublist(1)
-                                                  .join(' ')
-                                                  .trim()
-                                              : '';
-                                    }
-
-                                    await FirebaseFirestore.instance
-                                        .collection('users')
-                                        .doc(patient.id)
-                                        .update({
-                                          'firstName': first,
-                                          'lastName': last,
-                                        });
-
-                                    Navigator.pop(
-                                      context,
-                                    ); // closes rename popup
-                                  },
-                                  child: const Text('Save'),
-                                ),
-                              ],
-                            ),
-                      );
                     }
                   },
-                  itemBuilder:
-                      (context) => [
-                        const PopupMenuItem(
-                          value: 'archive',
-                          child: Text(
-                            'Archive',
-                            style: TextStyle(color: Colors.black),
-                          ),
-                        ),
-                        const PopupMenuItem(
-                          value: 'rename',
-                          child: Text(
-                            'Rename',
-                            style: TextStyle(color: Colors.black),
-                          ),
-                        ),
-                      ],
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'archive',
+                      child: Text('Archive',
+                          style: TextStyle(color: Colors.black)),
+                    ),
+                  ],
                 ),
                 onTap: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder:
-                          (context) => PatientDetailScreen(
-                            patientId: patient.id,
-                            centerId: widget.centerId,
-                            centerName: widget.centerName,
-                          ),
+                      builder: (context) => PatientDetailScreen(
+                        patientId: patient.id,
+                        centerId: widget.centerId,
+                        centerName: widget.centerName,
+                      ),
                     ),
                   );
                 },
@@ -519,26 +450,20 @@ class _PatientListScreenState extends State<PatientListScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 🔹 Header aligned with logo + Edentify name
                 Container(
+                  width: double.infinity,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                   color: darkerPrimaryColor,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  child: Row(
-                    children: [
-                      const SizedBox(width: 16), // same spacing as logo padding
-                      Text(
-                        widget.centerName,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
+                  child: Text(
+                    widget.centerName,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-
-                // 🔹 Search bar + buttons
                 Padding(
                   padding: const EdgeInsets.all(16),
                   child: Row(
@@ -560,19 +485,20 @@ class _PatientListScreenState extends State<PatientListScreen> {
                       ),
                       const SizedBox(width: 8),
                       IconButton(
-                        icon: const Icon(Icons.person_add, color: primaryColor),
+                        icon: const Icon(Icons.person_add,
+                            color: primaryColor),
                         tooltip: 'Add Patient',
                         onPressed: _showAddPatientDialog,
                       ),
                       IconButton(
-                        icon: const Icon(Icons.archive, color: primaryColor),
+                        icon:
+                            const Icon(Icons.archive, color: primaryColor),
                         tooltip: 'Archived Patients',
                         onPressed: _showArchivedPatientsPopup,
                       ),
                     ],
                   ),
                 ),
-
                 const SizedBox(height: 8),
                 Expanded(child: _buildPatientList()),
               ],
