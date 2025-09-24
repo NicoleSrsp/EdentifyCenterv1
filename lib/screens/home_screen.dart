@@ -214,7 +214,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
-                          initialValue: frequency,
+                          value: frequency,
                           decoration: const InputDecoration(
                             labelText: 'Frequency',
                           ),
@@ -321,7 +321,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ],
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
-                          initialValue: selectedShift,
+                          value: selectedShift,
                           decoration: const InputDecoration(labelText: 'Shift'),
                           items:
                               shifts

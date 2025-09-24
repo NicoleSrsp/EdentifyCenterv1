@@ -144,7 +144,7 @@ class _PatientListScreenState extends State<PatientListScreen> {
                     return DropdownButtonFormField<String>(
                       decoration:
                           const InputDecoration(labelText: "Assign Doctor"),
-                      initialValue: selectedDoctorId,
+                      value: selectedDoctorId,
                       items: docs.map((doc) {
                         final data = doc.data() as Map<String, dynamic>;
                         return DropdownMenuItem<String>(
