@@ -21,7 +21,6 @@ class AddPatientRecordScreen extends StatefulWidget {
 
 class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
   final _formKey = GlobalKey<FormState>();
-
   final _preWeightController = TextEditingController();
   final _postWeightController = TextEditingController();
   final _ufGoalController = TextEditingController();
@@ -78,13 +77,89 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
     record["date"] = _selectedDate.toIso8601String().split("T").first;
     record["createdAt"] = FieldValue.serverTimestamp();
 
-    // Save with merge (so updates don’t delete old fields)
+    // Save to patient’s records collection (unchanged)
     await FirebaseFirestore.instance
         .collection("users")
         .doc(widget.patientId)
         .collection("records")
         .doc(_selectedDate.toIso8601String().split("T").first)
         .set(record, SetOptions(merge: true));
+
+    // --- Minimal addition: detect which section was updated and notify doctor ---
+    try {
+      final patientDoc =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(widget.patientId)
+              .get();
+
+      if (patientDoc.exists) {
+        final doctorId = patientDoc['doctorId'];
+        final firstName = patientDoc['firstName'] ?? '';
+        final lastName = patientDoc['lastName'] ?? '';
+
+        if (doctorId != null && doctorId.toString().isNotEmpty) {
+          // Which fields count as dialysis vs vitals
+          final dialysisFields = [
+            'preWeight',
+            'postWeight',
+            'ufGoal',
+            'ufRemoved',
+          ];
+          final vitalFields = [
+            'bloodPressure',
+            'pulseRate',
+            'temperature',
+            'respiration',
+            'oxygenSaturation',
+          ];
+
+          final hasDialysis = record.keys.any(
+            (k) => dialysisFields.contains(k),
+          );
+          final hasVitals = record.keys.any((k) => vitalFields.contains(k));
+
+          String title;
+          String message;
+          String category;
+
+          if (hasDialysis && hasVitals) {
+            title = 'New Vitals & Dialysis Info';
+            message =
+                'Nurse recorded dialysis information and vital signs for $firstName $lastName.';
+            category = 'vitals_and_dialysis';
+          } else if (hasDialysis) {
+            title = 'New Dialysis Info';
+            message =
+                'Nurse recorded dialysis information for $firstName $lastName.';
+            category = 'dialysis';
+          } else if (hasVitals) {
+            title = 'New Vital Signs';
+            message = 'Nurse recorded vital signs for $firstName $lastName.';
+            category = 'vitals';
+          } else {
+            title = 'New Patient Record';
+            message = 'Nurse updated patient record for $firstName $lastName.';
+            category = 'record';
+          }
+
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(doctorId)
+              .collection('notifications')
+              .add({
+                'title': title,
+                'message': message,
+                'patientId': widget.patientId,
+                'createdAt': FieldValue.serverTimestamp(),
+                'read': false,
+                'category': category, // optional - useful for filtering on UI
+              });
+        }
+      }
+    } catch (e) {
+      debugPrint('⚠️ Error sending doctor notification: $e');
+    }
 
     Navigator.pop(context);
   }
