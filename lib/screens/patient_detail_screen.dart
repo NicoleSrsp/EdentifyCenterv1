@@ -58,27 +58,24 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // 🔹 Header Bar
+                      // ✅ Consistent Header Bar (same as HomeScreen)
                       Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: SideMenu.darkerPrimaryColor,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              blurRadius: 6,
-                              offset: const Offset(0, 3),
+                        color: const Color(0xFF045347),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        width: double.infinity,
+                        child: Row(
+                          children: [
+                            const SizedBox(width: 16),
+                            Text(
+                              widget.centerName,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
-                        ),
-                        width: double.infinity,
-                        child: Text(
-                          widget.centerName,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                          ),
                         ),
                       ),
 
@@ -302,7 +299,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
     );
   }
 
-  // 🔹 Info Row
+  // 🔹 Info Row Widget
   Widget _buildInfoRow(IconData icon, String label, String value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
@@ -484,7 +481,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                                   .doc(recordId)
                                   .update(updatedData);
 
-                              // 🩺 Improved Doctor Notification (SMART + Natural Wording)
+                              // 🔔 Doctor Notification logic remains unchanged
                               try {
                                 final patientDoc =
                                     await FirebaseFirestore.instance
@@ -502,7 +499,6 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                                       doctorId.toString().isNotEmpty) {
                                     final changedFields = <String>[];
                                     updatedData.forEach((key, value) {
-                                      // Skip updatedAt and unchanged values
                                       if (key != 'updatedAt' &&
                                           record[key]?.toString() !=
                                               value.toString()) {
