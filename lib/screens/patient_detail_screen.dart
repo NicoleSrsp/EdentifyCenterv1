@@ -315,6 +315,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
   }
 
   // 🔹 Edit Dialog
+  // 🔹 Modern & Improved Edit Dialog (UI Only)
   void _showEditRecordDialog(
     BuildContext context,
     String patientId,
@@ -355,109 +356,151 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
       context: context,
       builder: (context) {
         return Dialog(
-          insetPadding: const EdgeInsets.all(20),
+          insetPadding: const EdgeInsets.all(24),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           child: SizedBox(
-            width: 600,
+            width: 700,
             child: Scaffold(
               backgroundColor: Colors.white,
               appBar: AppBar(
-                title: const Text("Edit Patient Record"),
-                backgroundColor: Colors.teal,
+                backgroundColor: const Color(0xFF045347),
+                title: const Text(
+                  "Edit Patient Record",
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+                centerTitle: true,
                 automaticallyImplyLeading: false,
                 actions: [
                   IconButton(
-                    icon: const Icon(Icons.close),
+                    icon: const Icon(Icons.close, color: Colors.white),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
               ),
               body: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(20),
                 child: Form(
                   key: _formKey,
                   child: ListView(
                     children: [
-                      Text(
+                      const SizedBox(height: 10),
+                      _buildSectionHeader(
+                        Icons.monitor_weight,
                         "Dialysis Information",
-                        style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: 8),
+
+                      // 🔹 Dialysis Info Card
                       Card(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        elevation: 3,
                         child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Column(
+                          padding: const EdgeInsets.all(20),
+                          child: Wrap(
+                            spacing: 16,
+                            runSpacing: 16,
                             children: [
                               _buildEditField(
                                 "Pre-Weight (kg)",
                                 preWeightController,
+                                width: 300,
                               ),
                               _buildEditField(
                                 "Post-Weight (kg)",
                                 postWeightController,
+                                width: 300,
                               ),
-                              _buildEditField("UF Goal (L)", ufGoalController),
+                              _buildEditField(
+                                "UF Goal (L)",
+                                ufGoalController,
+                                width: 300,
+                              ),
                               _buildEditField(
                                 "UF Removed (L)",
                                 ufRemovedController,
+                                width: 300,
                               ),
                             ],
                           ),
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      Text(
-                        "Vital Signs",
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
+
+                      const SizedBox(height: 24),
+                      _buildSectionHeader(Icons.favorite, "Vital Signs"),
                       const SizedBox(height: 8),
+
+                      // 🔹 Vital Signs Card
                       Card(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        elevation: 3,
                         child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Column(
+                          padding: const EdgeInsets.all(20),
+                          child: Wrap(
+                            spacing: 16,
+                            runSpacing: 16,
                             children: [
                               _buildEditField(
                                 "Blood Pressure (mmHg)",
                                 bpController,
+                                width: 300,
                                 keyboard: TextInputType.text,
                               ),
                               _buildEditField(
                                 "Pulse Rate (bpm)",
                                 pulseController,
+                                width: 300,
                               ),
                               _buildEditField(
                                 "Temperature (°C)",
                                 tempController,
+                                width: 300,
                               ),
                               _buildEditField(
                                 "Respiration Rate",
                                 respirationController,
+                                width: 300,
                               ),
                               _buildEditField(
                                 "Oxygen Saturation (%)",
                                 o2Controller,
+                                width: 300,
                               ),
                             ],
                           ),
                         ),
                       ),
-                      const SizedBox(height: 20),
+
+                      const SizedBox(height: 28),
                       Align(
                         alignment: Alignment.centerRight,
                         child: ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.teal,
+                            backgroundColor: const Color(0xFF045347),
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 12,
+                              horizontal: 24,
+                              vertical: 14,
                             ),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(30),
                             ),
+                            elevation: 5,
                           ),
                           icon: const Icon(Icons.save, color: Colors.white),
                           label: const Text(
                             "Save Changes",
-                            style: TextStyle(color: Colors.white),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
                           ),
                           onPressed: () async {
                             if (_formKey.currentState!.validate()) {
@@ -481,7 +524,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                                   .doc(recordId)
                                   .update(updatedData);
 
-                              // 🔔 Doctor Notification logic remains unchanged
+                              // ✅ Doctor Notification Logic (unchanged)
                               try {
                                 final patientDoc =
                                     await FirebaseFirestore.instance
@@ -577,16 +620,47 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                               }
 
                               Navigator.pop(context);
+                              // ✅ Themed Snackbar
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Record updated successfully'),
+                                SnackBar(
+                                  content: Row(
+                                    children: const [
+                                      Icon(
+                                        Icons.check_circle,
+                                        color: Colors.white,
+                                      ),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        'Record updated successfully',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  backgroundColor:
+                                      Theme.of(context)
+                                          .colorScheme
+                                          .primary, // 🟢 Uses app theme color
+                                  behavior:
+                                      SnackBarBehavior
+                                          .floating, // makes it float above content
+                                  margin: const EdgeInsets.all(
+                                    16,
+                                  ), // padding from edges
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  duration: const Duration(
+                                    seconds: 2,
+                                  ), // visible for 2 seconds
                                 ),
                               );
                             }
                           },
                         ),
                       ),
-                      const SizedBox(height: 8),
                     ],
                   ),
                 ),
@@ -598,13 +672,29 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
     );
   }
 
+  // 🔹 Reusable labeled section header
+  Widget _buildSectionHeader(IconData icon, String title) {
+    return Row(
+      children: [
+        Icon(icon, color: Colors.teal.shade700),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+      ],
+    );
+  }
+
+  // 🔹 Reusable input field with flexible width
   Widget _buildEditField(
     String label,
     TextEditingController controller, {
     TextInputType keyboard = TextInputType.number,
+    double width = double.infinity,
   }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+    return SizedBox(
+      width: width,
       child: TextFormField(
         controller: controller,
         keyboardType: keyboard,
@@ -613,6 +703,14 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
           filled: true,
           fillColor: Colors.grey[100],
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          focusedBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: Colors.teal.shade700, width: 1.5),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 14,
+          ),
         ),
       ),
     );
