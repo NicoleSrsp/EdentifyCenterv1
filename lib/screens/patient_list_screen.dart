@@ -85,8 +85,9 @@ class _PatientListScreenState extends State<PatientListScreen> {
                 ),
                 TextField(
                   controller: birthdayController,
-                  decoration:
-                      const InputDecoration(labelText: 'Birthday (YYYY-MM-DD)'),
+                  decoration: const InputDecoration(
+                    labelText: 'Birthday (YYYY-MM-DD)',
+                  ),
                 ),
                 TextField(
                   controller: phoneController,
@@ -105,12 +106,14 @@ class _PatientListScreenState extends State<PatientListScreen> {
                 TextField(
                   controller: startDateController,
                   decoration: const InputDecoration(
-                      labelText: 'Start of Treatment (YYYY-MM-DD)'),
+                    labelText: 'Start of Treatment (YYYY-MM-DD)',
+                  ),
                 ),
                 TextField(
                   controller: healthController,
-                  decoration:
-                      const InputDecoration(labelText: 'Health Condition(s)'),
+                  decoration: const InputDecoration(
+                    labelText: 'Health Condition(s)',
+                  ),
                 ),
                 TextField(
                   controller: passwordController,
@@ -119,17 +122,19 @@ class _PatientListScreenState extends State<PatientListScreen> {
                 ),
                 TextField(
                   controller: confirmPasswordController,
-                  decoration:
-                      const InputDecoration(labelText: 'Confirm Password'),
+                  decoration: const InputDecoration(
+                    labelText: 'Confirm Password',
+                  ),
                   obscureText: true,
                 ),
                 const SizedBox(height: 16),
                 // Dropdown for doctors under this center
                 StreamBuilder<QuerySnapshot>(
-                  stream: FirebaseFirestore.instance
-                      .collection('doctor_inCharge')
-                      .where('centerId', isEqualTo: widget.centerId)
-                      .snapshots(),
+                  stream:
+                      FirebaseFirestore.instance
+                          .collection('doctor_inCharge')
+                          .where('centerId', isEqualTo: widget.centerId)
+                          .snapshots(),
                   builder: (context, snapshot) {
                     if (!snapshot.hasData) {
                       return const CircularProgressIndicator();
@@ -142,23 +147,27 @@ class _PatientListScreenState extends State<PatientListScreen> {
                     }
 
                     return DropdownButtonFormField<String>(
-                      decoration:
-                          const InputDecoration(labelText: "Assign Doctor"),
+                      decoration: const InputDecoration(
+                        labelText: "Assign Doctor",
+                      ),
                       value: selectedDoctorId,
-                      items: docs.map((doc) {
-                        final data = doc.data() as Map<String, dynamic>;
-                        return DropdownMenuItem<String>(
-                          value: doc.id,
-                          child: Text(data['name'] ?? "No Name"),
-                        );
-                      }).toList(),
+                      items:
+                          docs.map((doc) {
+                            final data = doc.data() as Map<String, dynamic>;
+                            return DropdownMenuItem<String>(
+                              value: doc.id,
+                              child: Text(data['name'] ?? "No Name"),
+                            );
+                          }).toList(),
                       onChanged: (value) {
                         if (value != null) {
                           selectedDoctorId = value;
-                          final doctorDoc =
-                              docs.firstWhere((d) => d.id == value);
+                          final doctorDoc = docs.firstWhere(
+                            (d) => d.id == value,
+                          );
                           selectedDoctorName =
-                              (doctorDoc.data() as Map<String, dynamic>)['name'];
+                              (doctorDoc.data()
+                                  as Map<String, dynamic>)['name'];
                         }
                       },
                     );
@@ -188,8 +197,7 @@ class _PatientListScreenState extends State<PatientListScreen> {
                 final startDate = startDateController.text.trim();
                 final health = healthController.text.trim();
                 final password = passwordController.text.trim();
-                final confirmPassword =
-                    confirmPasswordController.text.trim();
+                final confirmPassword = confirmPasswordController.text.trim();
 
                 if (firstName.isEmpty ||
                     lastName.isEmpty ||
@@ -201,24 +209,21 @@ class _PatientListScreenState extends State<PatientListScreen> {
                     password.isEmpty ||
                     email.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text("All fields are required.")),
+                    const SnackBar(content: Text("All fields are required.")),
                   );
                   return;
                 }
 
                 if (password != confirmPassword) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text("Passwords do not match.")),
+                    const SnackBar(content: Text("Passwords do not match.")),
                   );
                   return;
                 }
 
                 if (selectedDoctorId == null || selectedDoctorName == null) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text("Please assign a doctor.")),
+                    const SnackBar(content: Text("Please assign a doctor.")),
                   );
                   return;
                 }
@@ -227,7 +232,9 @@ class _PatientListScreenState extends State<PatientListScreen> {
                   // ✅ Create patient account in FirebaseAuth
                   UserCredential cred = await FirebaseAuth.instance
                       .createUserWithEmailAndPassword(
-                          email: email, password: password);
+                        email: email,
+                        password: password,
+                      );
 
                   final uid = cred.user!.uid;
 
@@ -236,36 +243,51 @@ class _PatientListScreenState extends State<PatientListScreen> {
                       .collection('users')
                       .doc(uid)
                       .set({
-                    'firstName': firstName,
-                    'middleName': middleName,
-                    'lastName': lastName,
-                    'birthday': birthday,
-                    'phone': phone,
-                    'email': email,
-                    'address': address,
-                    'startDate': startDate,
-                    'healthConditions': health,
-                    'centerId': widget.centerId,
-                    'centerName': widget.centerName,
-                    'doctorId': selectedDoctorId,
-                    'doctorName': selectedDoctorName,
-                    'status': 'active',
-                    'createdAt': FieldValue.serverTimestamp(),
-                  });
+                        'firstName': firstName,
+                        'middleName': middleName,
+                        'lastName': lastName,
+                        'birthday': birthday,
+                        'phone': phone,
+                        'email': email,
+                        'address': address,
+                        'startDate': startDate,
+                        'healthConditions': health,
+                        'centerId': widget.centerId,
+                        'centerName': widget.centerName,
+                        'doctorId': selectedDoctorId,
+                        'doctorName': selectedDoctorName,
+                        'status': 'active',
+                        'createdAt': FieldValue.serverTimestamp(),
+                      });
+
+                  // ✅ Create a notification for the assigned doctor
+                  await FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(selectedDoctorId)
+                      .collection('notifications')
+                      .add({
+                        'title': 'New Patient Assigned',
+                        'message':
+                            '$firstName $lastName has been assigned to you.',
+                        'patientId': uid,
+                        'createdAt': FieldValue.serverTimestamp(),
+                        'read': false,
+                      });
 
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                        content: Text("Patient added successfully.")),
+                      content: Text("Patient added successfully."),
+                    ),
                   );
                 } on FirebaseAuthException catch (e) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text("Auth error: ${e.message}")),
                   );
                 } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("Error: $e")),
-                  );
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text("Error: $e")));
                 }
               },
               child: const Text('Add'),
@@ -286,11 +308,12 @@ class _PatientListScreenState extends State<PatientListScreen> {
           content: SizedBox(
             width: 500,
             child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('users')
-                  .where('centerId', isEqualTo: widget.centerId)
-                  .where('status', isEqualTo: 'archived')
-                  .snapshots(),
+              stream:
+                  FirebaseFirestore.instance
+                      .collection('users')
+                      .where('centerId', isEqualTo: widget.centerId)
+                      .where('status', isEqualTo: 'archived')
+                      .snapshots(),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) return const CircularProgressIndicator();
                 final docs = snapshot.data!.docs;
@@ -314,13 +337,16 @@ class _PatientListScreenState extends State<PatientListScreen> {
                                 .update({'status': 'active'});
                           }
                         },
-                        itemBuilder: (context) => [
-                          const PopupMenuItem(
-                            value: 'restore',
-                            child: Text('Restore',
-                                style: TextStyle(color: Colors.black)),
-                          ),
-                        ],
+                        itemBuilder:
+                            (context) => [
+                              const PopupMenuItem(
+                                value: 'restore',
+                                child: Text(
+                                  'Restore',
+                                  style: TextStyle(color: Colors.black),
+                                ),
+                              ),
+                            ],
                       ),
                     );
                   },
@@ -341,11 +367,12 @@ class _PatientListScreenState extends State<PatientListScreen> {
 
   Widget _buildPatientList() {
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('users')
-          .where('centerId', isEqualTo: widget.centerId)
-          .where('status', isEqualTo: 'active')
-          .snapshots(),
+      stream:
+          FirebaseFirestore.instance
+              .collection('users')
+              .where('centerId', isEqualTo: widget.centerId)
+              .where('status', isEqualTo: 'active')
+              .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return const Center(child: Text('Error loading patients.'));
@@ -357,11 +384,12 @@ class _PatientListScreenState extends State<PatientListScreen> {
         var docs = snapshot.data!.docs;
 
         if (_searchText.isNotEmpty) {
-          docs = docs.where((doc) {
-            final data = doc.data() as Map<String, dynamic>;
-            final name = _getFullName(data).toLowerCase();
-            return name.contains(_searchText);
-          }).toList();
+          docs =
+              docs.where((doc) {
+                final data = doc.data() as Map<String, dynamic>;
+                final name = _getFullName(data).toLowerCase();
+                return name.contains(_searchText);
+              }).toList();
         }
 
         docs.sort((a, b) {
@@ -388,12 +416,15 @@ class _PatientListScreenState extends State<PatientListScreen> {
               margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               color: primaryColor,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
+                borderRadius: BorderRadius.circular(8),
+              ),
               child: ListTile(
                 title: Text(
                   fullName,
                   style: const TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.w600),
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 trailing: PopupMenuButton<String>(
                   icon: const Icon(Icons.more_vert, color: Colors.white),
@@ -405,23 +436,27 @@ class _PatientListScreenState extends State<PatientListScreen> {
                           .update({'status': 'archived'});
                     }
                   },
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(
-                      value: 'archive',
-                      child: Text('Archive',
-                          style: TextStyle(color: Colors.black)),
-                    ),
-                  ],
+                  itemBuilder:
+                      (context) => [
+                        const PopupMenuItem(
+                          value: 'archive',
+                          child: Text(
+                            'Archive',
+                            style: TextStyle(color: Colors.black),
+                          ),
+                        ),
+                      ],
                 ),
                 onTap: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => PatientDetailScreen(
-                        patientId: patient.id,
-                        centerId: widget.centerId,
-                        centerName: widget.centerName,
-                      ),
+                      builder:
+                          (context) => PatientDetailScreen(
+                            patientId: patient.id,
+                            centerId: widget.centerId,
+                            centerName: widget.centerName,
+                          ),
                     ),
                   );
                 },
@@ -452,8 +487,10 @@ class _PatientListScreenState extends State<PatientListScreen> {
               children: [
                 Container(
                   width: double.infinity,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 16,
+                  ),
                   color: darkerPrimaryColor,
                   child: Text(
                     widget.centerName,
@@ -485,14 +522,12 @@ class _PatientListScreenState extends State<PatientListScreen> {
                       ),
                       const SizedBox(width: 8),
                       IconButton(
-                        icon: const Icon(Icons.person_add,
-                            color: primaryColor),
+                        icon: const Icon(Icons.person_add, color: primaryColor),
                         tooltip: 'Add Patient',
                         onPressed: _showAddPatientDialog,
                       ),
                       IconButton(
-                        icon:
-                            const Icon(Icons.archive, color: primaryColor),
+                        icon: const Icon(Icons.archive, color: primaryColor),
                         tooltip: 'Archived Patients',
                         onPressed: _showArchivedPatientsPopup,
                       ),
