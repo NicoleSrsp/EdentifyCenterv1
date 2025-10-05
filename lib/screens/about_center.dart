@@ -17,136 +17,270 @@ class AboutScreen extends StatelessWidget {
     debugPrint("📌 AboutScreen opened with centerId: $centerId");
 
     return Scaffold(
+      backgroundColor: Colors.grey[50],
       body: Row(
         children: [
-          // ✅ Sidebar (keep only once)
+          // ✅ Sidebar (keep consistent)
           SideMenu(
             centerId: centerId,
-            centerName: centerName, // use what was passed in
+            centerName: centerName,
             selectedMenu: 'About Center',
           ),
 
-          // ✅ Main content only, no duplicate SideMenu inside
+          // ✅ Main Content Area
           Expanded(
-            child: FutureBuilder<DocumentSnapshot>(
-              future: FirebaseFirestore.instance
-                  .collection('centers')
-                  .doc(centerId)
-                  .get(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError) {
-                  debugPrint("❌ Firestore error: ${snapshot.error}");
-                  return Center(child: Text('Error: ${snapshot.error}'));
-                }
-                if (!snapshot.hasData || !snapshot.data!.exists) {
-                  debugPrint("❌ No document found for centerId: $centerId");
-                  return const Center(child: Text('Failed to load center data'));
-                }
-
-                final data = snapshot.data!.data() as Map<String, dynamic>;
-                debugPrint("✅ Firestore data loaded: $data");
-
-                return SingleChildScrollView(
-                  padding: const EdgeInsets.all(32),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ✅ Header (EXACT same as home_screen.dart)
+                Container(
+                  color: const Color(0xFF045347),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  width: double.infinity,
+                  child: Row(
                     children: [
-                      // Header with Logo + Center Info
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          CircleAvatar(
-                            radius: 45,
-                            backgroundColor: Colors.blue.shade100,
-                            child: const Icon(
-                              Icons.local_hospital,
-                              size: 40,
-                              color: Colors.blue,
-                            ),
-                          ),
-                          const SizedBox(width: 20),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  data['name'] ?? centerName,
-                                  style: const TextStyle(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.black, // ✅ unchanged
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  data['address'] ?? 'No address provided',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: Colors.grey.shade700,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  "📞 ${data['contactNumber'] ?? 'No contact'}",
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w500,
-                                    color: Colors.black, // ✅ unchanged
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 40),
-
-                      // Mission & Vision Section
-                      Container(
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
+                      const SizedBox(width: 16),
+                      Text(
+                        centerName,
+                        style: const TextStyle(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black12,
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              "Our Mission & Vision",
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.blueAccent,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              data['mission'] ??
-                                  'No mission/vision information available.',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                height: 1.5,
-                                color: Colors.black, // ✅ unchanged
-                              ),
-                            ),
-                          ],
-                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
-                );
-              },
+                ),
+
+                // ✅ Scrollable Content
+                Expanded(
+                  child: FutureBuilder<DocumentSnapshot>(
+                    future: FirebaseFirestore.instance
+                        .collection('centers')
+                        .doc(centerId)
+                        .get(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (snapshot.hasError) {
+                        return Center(child: Text('Error: ${snapshot.error}'));
+                      }
+                      if (!snapshot.hasData || !snapshot.data!.exists) {
+                        return const Center(
+                          child: Text('Failed to load center data'),
+                        );
+                      }
+
+                      final data = snapshot.data!.data() as Map<String, dynamic>;
+
+                      return SingleChildScrollView(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // 🔹 Center Info Card
+                            Container(
+                              padding: const EdgeInsets.all(24),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.08),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  CircleAvatar(
+                                    radius: 45,
+                                    backgroundColor: Colors.teal.shade50,
+                                    child: const Icon(
+                                      Icons.local_hospital,
+                                      size: 42,
+                                      color: Color(0xFF045347),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 20),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          data['name'] ?? centerName,
+                                          style: const TextStyle(
+                                            fontSize: 26,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xFF045347),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Row(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            const Icon(
+                                              Icons.location_on,
+                                              color: Colors.teal,
+                                              size: 20,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Expanded(
+                                              child: Text(
+                                                data['address'] ??
+                                                    'No address provided',
+                                                style: TextStyle(
+                                                  fontSize: 16,
+                                                  color: Colors.grey.shade800,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Row(
+                                          children: [
+                                            const Icon(
+                                              Icons.phone,
+                                              color: Colors.teal,
+                                              size: 20,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              data['contactNumber'] ??
+                                                  'No contact number',
+                                              style: const TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w500,
+                                                color: Colors.black87,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            const SizedBox(height: 30),
+
+                            // 🔹 Mission and Vision Section
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(24),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.08),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: const [
+                                      Icon(
+                                        Icons.flag_rounded,
+                                        color: Colors.teal,
+                                        size: 26,
+                                      ),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        "Our Mission & Vision",
+                                        style: TextStyle(
+                                          fontSize: 22,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF045347),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 14),
+                                  Text(
+                                    data['mission'] ??
+                                        'No mission or vision provided yet.',
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      height: 1.6,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            const SizedBox(height: 30),
+
+                            // 🔹 Additional Info (if any)
+                            if (data['description'] != null &&
+                                (data['description'] as String).isNotEmpty)
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(24),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.08),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: const [
+                                        Icon(
+                                          Icons.info_outline_rounded,
+                                          color: Colors.teal,
+                                          size: 26,
+                                        ),
+                                        SizedBox(width: 8),
+                                        Text(
+                                          "About This Center",
+                                          style: TextStyle(
+                                            fontSize: 22,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xFF045347),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 14),
+                                    Text(
+                                      data['description'],
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        height: 1.6,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
           ),
         ],

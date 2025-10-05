@@ -21,6 +21,7 @@ class AddPatientRecordScreen extends StatefulWidget {
 
 class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
   final _formKey = GlobalKey<FormState>();
+
   final _preWeightController = TextEditingController();
   final _postWeightController = TextEditingController();
   final _ufGoalController = TextEditingController();
@@ -40,9 +41,7 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
       firstDate: DateTime(2020),
       lastDate: DateTime.now(),
     );
-    if (picked != null) {
-      setState(() => _selectedDate = picked);
-    }
+    if (picked != null) setState(() => _selectedDate = picked);
   }
 
   Future<void> _saveRecord() async {
@@ -54,15 +53,12 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
       bool isNumber = false,
     }) {
       if (controller.text.trim().isNotEmpty) {
-        record[key] =
-            isNumber
-                ? double.tryParse(controller.text.trim()) ??
-                    controller.text.trim()
-                : controller.text.trim();
+        record[key] = isNumber
+            ? double.tryParse(controller.text.trim()) ?? controller.text.trim()
+            : controller.text.trim();
       }
     }
 
-    // Add fields (numbers parsed properly)
     addIfNotEmpty("preWeight", _preWeightController, isNumber: true);
     addIfNotEmpty("postWeight", _postWeightController, isNumber: true);
     addIfNotEmpty("ufGoal", _ufGoalController, isNumber: true);
@@ -73,11 +69,9 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
     addIfNotEmpty("respiration", _respirationController, isNumber: true);
     addIfNotEmpty("oxygenSaturation", _o2Controller, isNumber: true);
 
-    // Always include date & createdAt
     record["date"] = _selectedDate.toIso8601String().split("T").first;
     record["createdAt"] = FieldValue.serverTimestamp();
 
-    // Save to patient’s records collection (unchanged)
     await FirebaseFirestore.instance
         .collection("users")
         .doc(widget.patientId)
@@ -85,13 +79,12 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
         .doc(_selectedDate.toIso8601String().split("T").first)
         .set(record, SetOptions(merge: true));
 
-    // --- Minimal addition: detect which section was updated and notify doctor ---
+    // 🔔 Notification logic
     try {
-      final patientDoc =
-          await FirebaseFirestore.instance
-              .collection('users')
-              .doc(widget.patientId)
-              .get();
+      final patientDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.patientId)
+          .get();
 
       if (patientDoc.exists) {
         final doctorId = patientDoc['doctorId'];
@@ -99,24 +92,16 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
         final lastName = patientDoc['lastName'] ?? '';
 
         if (doctorId != null && doctorId.toString().isNotEmpty) {
-          // Which fields count as dialysis vs vitals
-          final dialysisFields = [
-            'preWeight',
-            'postWeight',
-            'ufGoal',
-            'ufRemoved',
-          ];
+          final dialysisFields = ['preWeight', 'postWeight', 'ufGoal', 'ufRemoved'];
           final vitalFields = [
             'bloodPressure',
             'pulseRate',
             'temperature',
             'respiration',
-            'oxygenSaturation',
+            'oxygenSaturation'
           ];
 
-          final hasDialysis = record.keys.any(
-            (k) => dialysisFields.contains(k),
-          );
+          final hasDialysis = record.keys.any((k) => dialysisFields.contains(k));
           final hasVitals = record.keys.any((k) => vitalFields.contains(k));
 
           String title;
@@ -130,8 +115,7 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
             category = 'vitals_and_dialysis';
           } else if (hasDialysis) {
             title = 'New Dialysis Info';
-            message =
-                'Nurse recorded dialysis information for $firstName $lastName.';
+            message = 'Nurse recorded dialysis information for $firstName $lastName.';
             category = 'dialysis';
           } else if (hasVitals) {
             title = 'New Vital Signs';
@@ -148,13 +132,13 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
               .doc(doctorId)
               .collection('notifications')
               .add({
-                'title': title,
-                'message': message,
-                'patientId': widget.patientId,
-                'createdAt': FieldValue.serverTimestamp(),
-                'read': false,
-                'category': category, // optional - useful for filtering on UI
-              });
+            'title': title,
+            'message': message,
+            'patientId': widget.patientId,
+            'createdAt': FieldValue.serverTimestamp(),
+            'read': false,
+            'category': category,
+          });
         }
       }
     } catch (e) {
@@ -164,11 +148,8 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
     Navigator.pop(context);
   }
 
-  Widget _buildTextField(
-    String label,
-    TextEditingController controller, {
-    TextInputType keyboard = TextInputType.number,
-  }) {
+  Widget _buildTextField(String label, TextEditingController controller,
+      {TextInputType keyboard = TextInputType.number}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: TextFormField(
@@ -176,11 +157,37 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
         keyboardType: keyboard,
         decoration: InputDecoration(
           labelText: label,
+          labelStyle: const TextStyle(color: Colors.black87),
           filled: true,
-          fillColor: Colors.grey[100],
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          fillColor: Colors.grey[50],
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.teal.shade300),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.teal.shade600, width: 1.8),
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title, IconData icon) {
+    return Row(
+      children: [
+        Icon(icon, color: Colors.teal.shade700),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF045347),
+          ),
+        ),
+      ],
     );
   }
 
@@ -193,135 +200,141 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
           SideMenu(
             centerId: widget.centerId,
             centerName: widget.centerName,
-            selectedMenu:
-                "Patients", // ✅ highlight Patients since record belongs there
+            selectedMenu: "Patients",
           ),
 
           // 🔹 Main Content
           Expanded(
-            child: Scaffold(
-              appBar: AppBar(
-                title: const Text("Add Patient Record"),
-                backgroundColor: Colors.teal,
-                elevation: 2,
-              ),
-              body: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Form(
-                  key: _formKey,
-                  child: ListView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ✅ Header (same as home_screen.dart)
+                Container(
+                  color: const Color(0xFF045347),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  width: double.infinity,
+                  child: Row(
                     children: [
-                      // Date Section
-                      Card(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: ListTile(
-                          leading: const Icon(
-                            Icons.calendar_today,
-                            color: Colors.teal,
-                          ),
-                          title: Text(
-                            "Date: ${DateFormat.yMMMd().format(_selectedDate)}",
-                          ),
-                          trailing: TextButton(
-                            onPressed: _pickDate,
-                            child: const Text("Change"),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Dialysis Info Section
+                      const SizedBox(width: 16),
                       Text(
-                        "Dialysis Information",
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 8),
-                      Card(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
+                        widget.centerName,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
                         ),
-                        elevation: 1,
-                        child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Column(
-                            children: [
-                              _buildTextField(
-                                "Pre-Weight (kg)",
-                                _preWeightController,
-                              ),
-                              _buildTextField(
-                                "Post-Weight (kg)",
-                                _postWeightController,
-                              ),
-                              _buildTextField("UF Goal (L)", _ufGoalController),
-                              _buildTextField(
-                                "UF Removed (L)",
-                                _ufRemovedController,
-                              ),
-                            ],
-                          ),
-                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 16),
-
-                      // Vital Signs Section
-                      Text(
-                        "Vital Signs",
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 8),
-                      Card(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        elevation: 1,
-                        child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Column(
-                            children: [
-                              _buildTextField(
-                                "Blood Pressure (mmHg)",
-                                _bpController,
-                              ),
-                              _buildTextField(
-                                "Pulse Rate (bpm)",
-                                _pulseController,
-                              ),
-                              _buildTextField(
-                                "Temperature (°C)",
-                                _tempController,
-                                keyboard: const TextInputType.numberWithOptions(
-                                  decimal: true,
-                                ),
-                              ),
-                              _buildTextField(
-                                "Respiration Rate",
-                                _respirationController,
-                              ),
-                              _buildTextField(
-                                "Oxygen Saturation (%)",
-                                _o2Controller,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 80),
                     ],
                   ),
                 ),
-              ),
-              floatingActionButton: FloatingActionButton.extended(
-                onPressed: _saveRecord,
-                backgroundColor: Colors.teal,
-                icon: const Icon(Icons.save),
-                label: const Text("Save Record"),
-              ),
+
+                // ✅ Main Scrollable Body
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(20),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Date Picker Card
+                          Card(
+                            elevation: 2,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: ListTile(
+                              leading: const Icon(Icons.calendar_today, color: Colors.teal),
+                              title: Text(
+                                "Date: ${DateFormat.yMMMMd().format(_selectedDate)}",
+                                style: const TextStyle(fontWeight: FontWeight.w500),
+                              ),
+                              trailing: ElevatedButton(
+                                onPressed: _pickDate,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.teal.shade600,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: const Text(
+                                  "Change",
+                                  style: TextStyle(color: Colors.white), // ✅ White text
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+
+                          // Dialysis Info
+                          _buildSectionHeader("Dialysis Information", Icons.local_hospital),
+                          const SizedBox(height: 10),
+                          Card(
+                            elevation: 2,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                children: [
+                                  _buildTextField("Pre-Weight (kg)", _preWeightController),
+                                  _buildTextField("Post-Weight (kg)", _postWeightController),
+                                  _buildTextField("UF Goal (L)", _ufGoalController),
+                                  _buildTextField("UF Removed (L)", _ufRemovedController),
+                                ],
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 24),
+
+                          // Vital Signs
+                          _buildSectionHeader("Vital Signs", Icons.monitor_heart),
+                          const SizedBox(height: 10),
+                          Card(
+                            elevation: 2,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                children: [
+                                  _buildTextField("Blood Pressure (mmHg)", _bpController),
+                                  _buildTextField("Pulse Rate (bpm)", _pulseController),
+                                  _buildTextField("Temperature (°C)", _tempController,
+                                      keyboard: const TextInputType.numberWithOptions(decimal: true)),
+                                  _buildTextField("Respiration Rate", _respirationController),
+                                  _buildTextField("Oxygen Saturation (%)", _o2Controller),
+                                ],
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 80),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
+      ),
+      floatingActionButton: Container(
+        margin: const EdgeInsets.only(bottom: 10, right: 10),
+        child: FloatingActionButton.extended(
+          onPressed: _saveRecord,
+          icon: const Icon(Icons.save),
+          label: const Text(
+            "Save Record",
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          backgroundColor: Colors.teal.shade700,
+        ),
       ),
     );
   }
