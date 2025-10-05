@@ -53,9 +53,11 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
       bool isNumber = false,
     }) {
       if (controller.text.trim().isNotEmpty) {
-        record[key] = isNumber
-            ? double.tryParse(controller.text.trim()) ?? controller.text.trim()
-            : controller.text.trim();
+        record[key] =
+            isNumber
+                ? double.tryParse(controller.text.trim()) ??
+                    controller.text.trim()
+                : controller.text.trim();
       }
     }
 
@@ -72,19 +74,55 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
     record["date"] = _selectedDate.toIso8601String().split("T").first;
     record["createdAt"] = FieldValue.serverTimestamp();
 
-    await FirebaseFirestore.instance
+    final recordRef = FirebaseFirestore.instance
         .collection("users")
         .doc(widget.patientId)
         .collection("records")
-        .doc(_selectedDate.toIso8601String().split("T").first)
-        .set(record, SetOptions(merge: true));
+        .doc(_selectedDate.toIso8601String().split("T").first);
 
-    // 🔔 Notification logic
+    // Check if this record already exists to know if it's an update or new
+    final existingRecord = await recordRef.get();
+    final isUpdate = existingRecord.exists;
+
+    await recordRef.set(record, SetOptions(merge: true));
+
+    // 🟢 NEW SECTION: Send Notification to Patient
     try {
-      final patientDoc = await FirebaseFirestore.instance
-          .collection('users')
+      String title;
+      String message;
+
+      if (!isUpdate) {
+  title = "New Dialysis Record";
+  message = "Nurse recorded your new dialysis information today.";
+} else {
+  title = "Dialysis Record Updated";
+  message = "Nurse updated your dialysis information today.";
+}
+
+
+      await FirebaseFirestore.instance
+          .collection("users")
           .doc(widget.patientId)
-          .get();
+          .collection("notifications")
+          .add({
+            'title': title,
+            'message': message,
+            'timestamp': FieldValue.serverTimestamp(),
+            'read': false,
+          });
+
+      print("✅ Patient notified: $title");
+    } catch (e) {
+      print("⚠️ Error sending patient notification: $e");
+    }
+
+    // 🟢 Existing logic: Notify doctor (keep this part)
+    try {
+      final patientDoc =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(widget.patientId)
+              .get();
 
       if (patientDoc.exists) {
         final doctorId = patientDoc['doctorId'];
@@ -92,16 +130,23 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
         final lastName = patientDoc['lastName'] ?? '';
 
         if (doctorId != null && doctorId.toString().isNotEmpty) {
-          final dialysisFields = ['preWeight', 'postWeight', 'ufGoal', 'ufRemoved'];
+          final dialysisFields = [
+            'preWeight',
+            'postWeight',
+            'ufGoal',
+            'ufRemoved',
+          ];
           final vitalFields = [
             'bloodPressure',
             'pulseRate',
             'temperature',
             'respiration',
-            'oxygenSaturation'
+            'oxygenSaturation',
           ];
 
-          final hasDialysis = record.keys.any((k) => dialysisFields.contains(k));
+          final hasDialysis = record.keys.any(
+            (k) => dialysisFields.contains(k),
+          );
           final hasVitals = record.keys.any((k) => vitalFields.contains(k));
 
           String title;
@@ -115,7 +160,8 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
             category = 'vitals_and_dialysis';
           } else if (hasDialysis) {
             title = 'New Dialysis Info';
-            message = 'Nurse recorded dialysis information for $firstName $lastName.';
+            message =
+                'Nurse recorded dialysis information for $firstName $lastName.';
             category = 'dialysis';
           } else if (hasVitals) {
             title = 'New Vital Signs';
@@ -132,13 +178,13 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
               .doc(doctorId)
               .collection('notifications')
               .add({
-            'title': title,
-            'message': message,
-            'patientId': widget.patientId,
-            'createdAt': FieldValue.serverTimestamp(),
-            'read': false,
-            'category': category,
-          });
+                'title': title,
+                'message': message,
+                'patientId': widget.patientId,
+                'createdAt': FieldValue.serverTimestamp(),
+                'read': false,
+                'category': category,
+              });
         }
       }
     } catch (e) {
@@ -148,8 +194,11 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
     Navigator.pop(context);
   }
 
-  Widget _buildTextField(String label, TextEditingController controller,
-      {TextInputType keyboard = TextInputType.number}) {
+  Widget _buildTextField(
+    String label,
+    TextEditingController controller, {
+    TextInputType keyboard = TextInputType.number,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: TextFormField(
@@ -160,7 +209,10 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
           labelStyle: const TextStyle(color: Colors.black87),
           filled: true,
           fillColor: Colors.grey[50],
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 14,
+          ),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide(color: Colors.teal.shade300),
@@ -245,10 +297,15 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
                               borderRadius: BorderRadius.circular(16),
                             ),
                             child: ListTile(
-                              leading: const Icon(Icons.calendar_today, color: Colors.teal),
+                              leading: const Icon(
+                                Icons.calendar_today,
+                                color: Colors.teal,
+                              ),
                               title: Text(
                                 "Date: ${DateFormat.yMMMMd().format(_selectedDate)}",
-                                style: const TextStyle(fontWeight: FontWeight.w500),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                               trailing: ElevatedButton(
                                 onPressed: _pickDate,
@@ -260,7 +317,9 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
                                 ),
                                 child: const Text(
                                   "Change",
-                                  style: TextStyle(color: Colors.white), // ✅ White text
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                  ), // ✅ White text
                                 ),
                               ),
                             ),
@@ -268,7 +327,10 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
                           const SizedBox(height: 20),
 
                           // Dialysis Info
-                          _buildSectionHeader("Dialysis Information", Icons.local_hospital),
+                          _buildSectionHeader(
+                            "Dialysis Information",
+                            Icons.local_hospital,
+                          ),
                           const SizedBox(height: 10),
                           Card(
                             elevation: 2,
@@ -279,10 +341,22 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
                               padding: const EdgeInsets.all(16),
                               child: Column(
                                 children: [
-                                  _buildTextField("Pre-Weight (kg)", _preWeightController),
-                                  _buildTextField("Post-Weight (kg)", _postWeightController),
-                                  _buildTextField("UF Goal (L)", _ufGoalController),
-                                  _buildTextField("UF Removed (L)", _ufRemovedController),
+                                  _buildTextField(
+                                    "Pre-Weight (kg)",
+                                    _preWeightController,
+                                  ),
+                                  _buildTextField(
+                                    "Post-Weight (kg)",
+                                    _postWeightController,
+                                  ),
+                                  _buildTextField(
+                                    "UF Goal (L)",
+                                    _ufGoalController,
+                                  ),
+                                  _buildTextField(
+                                    "UF Removed (L)",
+                                    _ufRemovedController,
+                                  ),
                                 ],
                               ),
                             ),
@@ -291,7 +365,10 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
                           const SizedBox(height: 24),
 
                           // Vital Signs
-                          _buildSectionHeader("Vital Signs", Icons.monitor_heart),
+                          _buildSectionHeader(
+                            "Vital Signs",
+                            Icons.monitor_heart,
+                          ),
                           const SizedBox(height: 10),
                           Card(
                             elevation: 2,
@@ -302,12 +379,30 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
                               padding: const EdgeInsets.all(16),
                               child: Column(
                                 children: [
-                                  _buildTextField("Blood Pressure (mmHg)", _bpController),
-                                  _buildTextField("Pulse Rate (bpm)", _pulseController),
-                                  _buildTextField("Temperature (°C)", _tempController,
-                                      keyboard: const TextInputType.numberWithOptions(decimal: true)),
-                                  _buildTextField("Respiration Rate", _respirationController),
-                                  _buildTextField("Oxygen Saturation (%)", _o2Controller),
+                                  _buildTextField(
+                                    "Blood Pressure (mmHg)",
+                                    _bpController,
+                                  ),
+                                  _buildTextField(
+                                    "Pulse Rate (bpm)",
+                                    _pulseController,
+                                  ),
+                                  _buildTextField(
+                                    "Temperature (°C)",
+                                    _tempController,
+                                    keyboard:
+                                        const TextInputType.numberWithOptions(
+                                          decimal: true,
+                                        ),
+                                  ),
+                                  _buildTextField(
+                                    "Respiration Rate",
+                                    _respirationController,
+                                  ),
+                                  _buildTextField(
+                                    "Oxygen Saturation (%)",
+                                    _o2Controller,
+                                  ),
                                 ],
                               ),
                             ),

@@ -25,14 +25,11 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
     return Scaffold(
       body: Row(
         children: [
-          // 🔹 Left Side Menu
           SideMenu(
             centerId: widget.centerId,
             centerName: widget.centerName,
             selectedMenu: 'Patients',
           ),
-
-          // 🔹 Main Content
           Expanded(
             child: Container(
               color: Colors.grey.shade100,
@@ -58,7 +55,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // ✅ Consistent Header Bar (same as HomeScreen)
+                      // 🔹 Header
                       Container(
                         color: const Color(0xFF045347),
                         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -78,10 +75,9 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                           ],
                         ),
                       ),
-
                       const SizedBox(height: 16),
 
-                      // 🔹 Patient Info Card
+                      // 🔹 Patient Info
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Card(
@@ -149,11 +145,10 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
 
                       const SizedBox(height: 16),
 
-                      // 🔹 Records Section
+                      // 🔹 Records
                       Expanded(
                         child: Column(
                           children: [
-                            // ➕ Add Record Button
                             Padding(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 16,
@@ -195,10 +190,9 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                                 ),
                               ),
                             ),
-
                             const SizedBox(height: 8),
 
-                            // 📋 Records List
+                            // 🔹 Records list
                             Expanded(
                               child: StreamBuilder<QuerySnapshot>(
                                 stream:
@@ -299,7 +293,6 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
     );
   }
 
-  // 🔹 Info Row Widget
   Widget _buildInfoRow(IconData icon, String label, String value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
@@ -314,8 +307,6 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
     );
   }
 
-  // 🔹 Edit Dialog
-  // 🔹 Modern & Improved Edit Dialog (UI Only)
   void _showEditRecordDialog(
     BuildContext context,
     String patientId,
@@ -394,8 +385,6 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                         "Dialysis Information",
                       ),
                       const SizedBox(height: 8),
-
-                      // 🔹 Dialysis Info Card
                       Card(
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
@@ -431,12 +420,9 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                           ),
                         ),
                       ),
-
                       const SizedBox(height: 24),
                       _buildSectionHeader(Icons.favorite, "Vital Signs"),
                       const SizedBox(height: 8),
-
-                      // 🔹 Vital Signs Card
                       Card(
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
@@ -452,7 +438,6 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                                 "Blood Pressure (mmHg)",
                                 bpController,
                                 width: 300,
-                                keyboard: TextInputType.text,
                               ),
                               _buildEditField(
                                 "Pulse Rate (bpm)",
@@ -478,7 +463,6 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                           ),
                         ),
                       ),
-
                       const SizedBox(height: 28),
                       Align(
                         alignment: Alignment.centerRight,
@@ -517,6 +501,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                                 'updatedAt': FieldValue.serverTimestamp(),
                               };
 
+                              // 🔹 Update record
                               await FirebaseFirestore.instance
                                   .collection('users')
                                   .doc(patientId)
@@ -524,87 +509,96 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                                   .doc(recordId)
                                   .update(updatedData);
 
-                              // ✅ Doctor Notification Logic (unchanged)
                               try {
+                                // 🔹 Determine which fields actually changed
+                                final changedFields = <String>[];
+                                updatedData.forEach((key, value) {
+                                  if (key != 'updatedAt' &&
+                                      record[key]?.toString() !=
+                                          value.toString()) {
+                                    changedFields.add(key);
+                                  }
+                                });
+
+                                // 🔹 Make field names readable
+                                final fieldNames = {
+                                  'preWeight': 'Pre-Weight',
+                                  'postWeight': 'Post-Weight',
+                                  'ufGoal': 'UF Goal',
+                                  'ufRemoved': 'UF Removed',
+                                  'bloodPressure': 'Blood Pressure',
+                                  'pulseRate': 'Pulse Rate',
+                                  'temperature': 'Temperature',
+                                  'respiration': 'Respiration',
+                                  'oxygenSaturation': 'Oxygen Saturation',
+                                };
+
+                                final readableChanges =
+                                    changedFields
+                                        .map((key) => fieldNames[key] ?? key)
+                                        .toList();
+
+                                // 🔹 Format nicely: “A, B and C”
+                                String formattedFields;
+                                if (readableChanges.isEmpty) {
+                                  formattedFields = '';
+                                } else if (readableChanges.length == 1) {
+                                  formattedFields = readableChanges.first;
+                                } else {
+                                  formattedFields =
+                                      readableChanges
+                                          .sublist(
+                                            0,
+                                            readableChanges.length - 1,
+                                          )
+                                          .join(', ') +
+                                      ' and ' +
+                                      readableChanges.last;
+                                }
+
+                                // 🔹 Compose message
+                                final message =
+                                    changedFields.isEmpty
+                                        ? 'Nurse saved your dialysis record today.'
+                                        : 'Nurse updated your $formattedFields today.';
+
+                                // 🔹 Send patient notification
+                                await FirebaseFirestore.instance
+                                    .collection('users')
+                                    .doc(patientId)
+                                    .collection('notifications')
+                                    .add({
+                                      'title':
+                                          changedFields.isEmpty
+                                              ? 'Dialysis Record Saved'
+                                              : 'Dialysis Record Updated',
+                                      'message': message,
+                                      'createdAt': FieldValue.serverTimestamp(),
+                                      'read': false,
+                                    });
+
+                                // 🔹 Notify assigned doctor (if any)
                                 final patientDoc =
                                     await FirebaseFirestore.instance
                                         .collection('users')
                                         .doc(patientId)
                                         .get();
 
-                                if (patientDoc.exists) {
+                                if (patientDoc.exists &&
+                                    patientDoc.data()!.containsKey(
+                                      'doctorId',
+                                    )) {
                                   final doctorId = patientDoc['doctorId'];
-                                  final firstName =
-                                      patientDoc['firstName'] ?? '';
-                                  final lastName = patientDoc['lastName'] ?? '';
-
                                   if (doctorId != null &&
                                       doctorId.toString().isNotEmpty) {
-                                    final changedFields = <String>[];
-                                    updatedData.forEach((key, value) {
-                                      if (key != 'updatedAt' &&
-                                          record[key]?.toString() !=
-                                              value.toString()) {
-                                        changedFields.add(key);
-                                      }
-                                    });
-
-                                    final fieldNames = {
-                                      'preWeight': 'Pre-Weight',
-                                      'postWeight': 'Post-Weight',
-                                      'ufGoal': 'UF Goal',
-                                      'ufRemoved': 'UF Removed',
-                                      'bloodPressure': 'Blood Pressure',
-                                      'pulseRate': 'Pulse Rate',
-                                      'temperature': 'Temperature',
-                                      'respiration': 'Respiration',
-                                      'oxygenSaturation': 'Oxygen Saturation',
-                                    };
-
-                                    final readableChanges =
-                                        changedFields
-                                            .map(
-                                              (key) => fieldNames[key] ?? key,
-                                            )
-                                            .toList();
-
-                                    String formattedFields;
-                                    if (readableChanges.isEmpty) {
-                                      formattedFields = '';
-                                    } else if (readableChanges.length == 1) {
-                                      formattedFields = readableChanges.first;
-                                    } else {
-                                      formattedFields =
-                                          readableChanges
-                                              .sublist(
-                                                0,
-                                                readableChanges.length - 1,
-                                              )
-                                              .join(', ') +
-                                          ' and ' +
-                                          readableChanges.last;
-                                    }
-
-                                    String title;
-                                    String message;
-
-                                    if (changedFields.isEmpty) {
-                                      title = 'Patient Record Saved';
-                                      message =
-                                          'Nurse saved ${firstName} ${lastName}\'s record.';
-                                    } else {
-                                      title = 'Updated Patient Record';
-                                      message =
-                                          'Nurse updated $formattedFields for $firstName $lastName.';
-                                    }
-
                                     await FirebaseFirestore.instance
                                         .collection('users')
                                         .doc(doctorId)
                                         .collection('notifications')
                                         .add({
-                                          'title': title,
-                                          'message': message,
+                                          'title': 'Dialysis Record Updated',
+                                          'message':
+                                              'Patient ${patientDoc['firstName']} ${patientDoc['lastName']} updated: $formattedFields.',
                                           'patientId': patientId,
                                           'createdAt':
                                               FieldValue.serverTimestamp(),
@@ -615,12 +609,11 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                                 }
                               } catch (e) {
                                 debugPrint(
-                                  '⚠️ Error sending doctor notification: $e',
+                                  '⚠️ Error sending notifications: $e',
                                 );
                               }
 
                               Navigator.pop(context);
-                              // ✅ Themed Snackbar
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Row(
@@ -640,21 +633,13 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                                     ],
                                   ),
                                   backgroundColor:
-                                      Theme.of(context)
-                                          .colorScheme
-                                          .primary, // 🟢 Uses app theme color
-                                  behavior:
-                                      SnackBarBehavior
-                                          .floating, // makes it float above content
-                                  margin: const EdgeInsets.all(
-                                    16,
-                                  ), // padding from edges
+                                      Theme.of(context).colorScheme.primary,
+                                  behavior: SnackBarBehavior.floating,
+                                  margin: const EdgeInsets.all(16),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
-                                  duration: const Duration(
-                                    seconds: 2,
-                                  ), // visible for 2 seconds
+                                  duration: const Duration(seconds: 2),
                                 ),
                               );
                             }
@@ -672,7 +657,6 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
     );
   }
 
-  // 🔹 Reusable labeled section header
   Widget _buildSectionHeader(IconData icon, String title) {
     return Row(
       children: [
@@ -686,7 +670,6 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
     );
   }
 
-  // 🔹 Reusable input field with flexible width
   Widget _buildEditField(
     String label,
     TextEditingController controller, {
