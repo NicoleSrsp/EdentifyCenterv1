@@ -4,9 +4,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'side_menu.dart';
 import 'doctor_detail_screen.dart';
 
-// Define your custom colors once
-const Color primaryColor = Color(0xFF056C5B); // main green
-const Color darkerPrimaryColor = Color(0xFF045347); // darker variant
+// Theme colors
+const Color primaryColor = Color(0xFF056C5B);
+const Color darkerPrimaryColor = Color(0xFF045347);
 
 class DoctorsScreen extends StatefulWidget {
   final String centerId;
@@ -41,63 +41,95 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
         var docs = snapshot.data!.docs;
 
         if (docs.isEmpty) {
-          return const Center(child: Text('No doctors found.'));
+          return const Center(
+            child: Text(
+              'No doctors found.',
+              style: TextStyle(fontSize: 16, color: Colors.grey),
+            ),
+          );
         }
 
-        return ListView.separated(
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
           itemCount: docs.length,
-          separatorBuilder: (_, __) => const Divider(height: 1),
           itemBuilder: (context, index) {
             final doctor = docs[index];
             final data = doctor.data() as Map<String, dynamic>;
             final doctorName = data['name'] ?? 'No Name';
-            final doctorContact = data['contact'] ?? '';
-            final doctorEmail = data['email'] ?? '';
+            final doctorContact = data['contact'] ?? 'No contact';
+            final doctorEmail = data['email'] ?? 'No email';
 
-            return InkWell(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => DoctorDetailScreen(
-                      doctorId: doctor.id,
-                      doctorName: doctorName,
-                      centerId: widget.centerId,
-                      centerName: widget.centerName,
-                    ),
-                  ),
-                );
-              },
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: Row(
-                  children: [
-                    Expanded(
-                      flex: 3,
-                      child: Text(
-                        doctorName.toUpperCase(),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeInOut,
+              margin: const EdgeInsets.only(bottom: 12),
+              child: Card(
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => DoctorDetailScreen(
+                          doctorId: doctor.id,
+                          doctorName: doctorName,
+                          centerId: widget.centerId,
+                          centerName: widget.centerName,
                         ),
                       ),
+                    );
+                  },
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const CircleAvatar(
+                          radius: 25,
+                          backgroundColor: primaryColor,
+                          child: Icon(Icons.person, color: Colors.white, size: 28),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                doctorName,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                doctorEmail,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey.shade700,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                doctorContact,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey.shade700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.chevron_right,
+                            color: Colors.grey, size: 26),
+                      ],
                     ),
-                    Expanded(
-                      flex: 2,
-                      child: Text(
-                        doctorContact,
-                        style: const TextStyle(fontSize: 13),
-                      ),
-                    ),
-                    Expanded(
-                      flex: 3,
-                      child: Text(
-                        doctorEmail,
-                        style: const TextStyle(fontSize: 13),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             );
@@ -119,66 +151,53 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text("Add Doctor"),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: const [
+              Icon(Icons.person_add_alt_1, color: primaryColor),
+              SizedBox(width: 8),
+              Text("Add Doctor", style: TextStyle(fontWeight: FontWeight.bold)),
+            ],
+          ),
           content: SingleChildScrollView(
             child: Column(
               children: [
-                TextField(
-                  controller: firstNameController,
-                  decoration: const InputDecoration(labelText: "First Name"),
-                ),
-                TextField(
-                  controller: lastNameController,
-                  decoration: const InputDecoration(labelText: "Last Name"),
-                ),
-                TextField(
-                  controller: emailController,
-                  decoration: const InputDecoration(labelText: "Email"),
-                  keyboardType: TextInputType.emailAddress,
-                ),
-                TextField(
-                  controller: passwordController,
-                  decoration: const InputDecoration(labelText: "Password"),
-                  obscureText: true,
-                ),
-                TextField(
-                  controller: confirmPasswordController,
-                  decoration:
-                      const InputDecoration(labelText: "Confirm Password"),
-                  obscureText: true,
-                ),
+                _buildTextField(firstNameController, "First Name"),
+                _buildTextField(lastNameController, "Last Name"),
+                _buildTextField(emailController, "Email",
+                    keyboardType: TextInputType.emailAddress),
+                _buildTextField(passwordController, "Password",
+                    obscureText: true),
+                _buildTextField(confirmPasswordController, "Confirm Password",
+                    obscureText: true),
               ],
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text("Cancel"),
+              child:
+                  const Text("Cancel", style: TextStyle(color: Colors.grey)),
             ),
-            ElevatedButton(
+            ElevatedButton.icon(
               onPressed: () async {
                 final firstName = firstNameController.text.trim();
                 final lastName = lastNameController.text.trim();
                 final email = emailController.text.trim();
                 final password = passwordController.text.trim();
-                final confirmPassword =
-                    confirmPasswordController.text.trim();
+                final confirmPassword = confirmPasswordController.text.trim();
 
                 if (firstName.isEmpty ||
                     lastName.isEmpty ||
                     email.isEmpty ||
                     password.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("All fields are required")),
-                  );
+                  _showSnack("All fields are required");
                   return;
                 }
 
                 if (password != confirmPassword) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text("Passwords do not match")),
-                  );
+                  _showSnack("Passwords do not match");
                   return;
                 }
 
@@ -190,7 +209,7 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
 
                   String doctorId = userCredential.user!.uid;
 
-                  // Step 2: Save doctor profile in doctor_inCharge
+                  // Step 2: Save doctor profile
                   await FirebaseFirestore.instance
                       .collection("doctor_inCharge")
                       .doc(doctorId)
@@ -203,7 +222,7 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                     "createdAt": FieldValue.serverTimestamp(),
                   });
 
-                  // Step 3: Save also in doctors_centers/doctor_center/doctors_center_collection
+                  // Step 3: Also save to doctors_centers
                   await FirebaseFirestore.instance
                       .collection("doctors_centers")
                       .doc("doctor_center")
@@ -218,16 +237,25 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                   });
 
                   Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Doctor added successfully")),
-                  );
+                  _showSnack("Doctor added successfully", success: true);
                 } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("Error: $e")),
-                  );
+                  _showSnack("Error: $e");
                 }
               },
-              child: const Text("Add"),
+              icon: const Icon(Icons.check, size: 18, color: Colors.white),
+              label: const Text(
+                "Add",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
             ),
           ],
         );
@@ -235,14 +263,45 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
     );
   }
 
+  void _showSnack(String message, {bool success = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: success ? primaryColor : Colors.redAccent,
+        content: Text(message),
+      ),
+    );
+  }
+
+  // --- Reusable TextField Builder ---
+  Widget _buildTextField(TextEditingController controller, String label,
+      {bool obscureText = false, TextInputType? keyboardType}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: TextField(
+        controller: controller,
+        obscureText: obscureText,
+        keyboardType: keyboardType,
+        decoration: InputDecoration(
+          labelText: label,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          focusedBorder: OutlineInputBorder(
+            borderSide: const BorderSide(color: primaryColor),
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+      ),
+    );
+  }
+
   // --- Main UI ---
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         backgroundColor: primaryColor,
         onPressed: _showAddDoctorDialog,
-        child: const Icon(Icons.add, color: Colors.white),
+        label: const Text("Add Doctor"),
+        icon: const Icon(Icons.add),
       ),
       body: Row(
         children: [
@@ -260,25 +319,26 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
               children: [
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 16),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
                   color: darkerPrimaryColor,
                   child: Text(
                     widget.centerName,
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 28,
+                      fontSize: 26,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
                 const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   child: Text(
-                    'Doctors',
+                    'Doctors List',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontSize: 16,
+                      fontSize: 18,
+                      color: primaryColor,
                     ),
                   ),
                 ),
