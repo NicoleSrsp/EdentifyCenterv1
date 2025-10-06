@@ -80,51 +80,50 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
         .collection("records")
         .doc(_selectedDate.toIso8601String().split("T").first);
 
-    // Check if this record already exists to know if it's an update or new
+    // 🔹 Check if this record already exists
     final existingRecord = await recordRef.get();
     final isUpdate = existingRecord.exists;
 
+    // 🔹 Save or update record
     await recordRef.set(record, SetOptions(merge: true));
 
-    // 🟢 NEW SECTION: Send Notification to Patient
+    // 🟢 Send Patient Notification
     try {
       String title;
       String message;
 
       if (!isUpdate) {
-  title = "New Dialysis Record";
-  message = "Nurse recorded your new dialysis information today.";
-} else {
-  title = "Dialysis Record Updated";
-  message = "Nurse updated your dialysis information today.";
-}
-
+        title = "New Dialysis Record Added";
+        message = "Nurse added your dialysis record today.";
+      } else {
+        title = "Dialysis Record Updated";
+        message = "Nurse updated your dialysis record today.";
+      }
 
       await FirebaseFirestore.instance
-          .collection("users")
+          .collection('users')
           .doc(widget.patientId)
-          .collection("notifications")
+          .collection('notifications')
           .add({
-            'title': title,
-            'message': message,
-            'timestamp': FieldValue.serverTimestamp(),
-            'read': false,
-          });
+        'title': title,
+        'message': message,
+        'createdAt': FieldValue.serverTimestamp(),
+        'read': false,
+      });
 
-      print("✅ Patient notified: $title");
+      debugPrint("✅ Patient notified: $title");
     } catch (e) {
-      print("⚠️ Error sending patient notification: $e");
+      debugPrint("⚠️ Error sending patient notification: $e");
     }
 
-    // 🟢 Existing logic: Notify doctor (keep this part)
+    // 🟢 Send Doctor Notification (if assigned)
     try {
-      final patientDoc =
-          await FirebaseFirestore.instance
-              .collection('users')
-              .doc(widget.patientId)
-              .get();
+      final patientDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.patientId)
+          .get();
 
-      if (patientDoc.exists) {
+      if (patientDoc.exists && patientDoc.data()!.containsKey('doctorId')) {
         final doctorId = patientDoc['doctorId'];
         final firstName = patientDoc['firstName'] ?? '';
         final lastName = patientDoc['lastName'] ?? '';
@@ -144,33 +143,39 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
             'oxygenSaturation',
           ];
 
-          final hasDialysis = record.keys.any(
-            (k) => dialysisFields.contains(k),
-          );
+          final hasDialysis = record.keys.any((k) => dialysisFields.contains(k));
           final hasVitals = record.keys.any((k) => vitalFields.contains(k));
 
           String title;
           String message;
           String category;
 
-          if (hasDialysis && hasVitals) {
-            title = 'New Vitals & Dialysis Info';
-            message =
-                'Nurse recorded dialysis information and vital signs for $firstName $lastName.';
-            category = 'vitals_and_dialysis';
-          } else if (hasDialysis) {
-            title = 'New Dialysis Info';
-            message =
-                'Nurse recorded dialysis information for $firstName $lastName.';
-            category = 'dialysis';
-          } else if (hasVitals) {
-            title = 'New Vital Signs';
-            message = 'Nurse recorded vital signs for $firstName $lastName.';
-            category = 'vitals';
+          if (!isUpdate) {
+            if (hasDialysis && hasVitals) {
+              title = 'New Dialysis Record Added';
+              message =
+                  'Nurse added dialysis information and vital signs for $firstName $lastName.';
+              category = 'vitals_and_dialysis';
+            } else if (hasDialysis) {
+              title = 'New Dialysis Record Added';
+              message =
+                  'Nurse added dialysis information for $firstName $lastName.';
+              category = 'dialysis';
+            } else if (hasVitals) {
+              title = 'New Vital Signs Added';
+              message = 'Nurse added vital signs for $firstName $lastName.';
+              category = 'vitals';
+            } else {
+              title = 'New Patient Record Added';
+              message =
+                  'Nurse added a new record for $firstName $lastName.';
+              category = 'record';
+            }
           } else {
-            title = 'New Patient Record';
-            message = 'Nurse updated patient record for $firstName $lastName.';
-            category = 'record';
+            title = 'Dialysis Record Updated';
+            message =
+                'Nurse updated dialysis record for $firstName $lastName.';
+            category = 'record_update';
           }
 
           await FirebaseFirestore.instance
@@ -178,20 +183,45 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
               .doc(doctorId)
               .collection('notifications')
               .add({
-                'title': title,
-                'message': message,
-                'patientId': widget.patientId,
-                'createdAt': FieldValue.serverTimestamp(),
-                'read': false,
-                'category': category,
-              });
+            'title': title,
+            'message': message,
+            'patientId': widget.patientId,
+            'createdAt': FieldValue.serverTimestamp(),
+            'read': false,
+            'category': category,
+          });
+
+          debugPrint("✅ Doctor notified: $title");
         }
       }
     } catch (e) {
       debugPrint('⚠️ Error sending doctor notification: $e');
     }
 
+    // 🟢 Show confirmation to nurse
     Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: const [
+            Icon(Icons.check_circle, color: Colors.white),
+            SizedBox(width: 8),
+            Text(
+              'Record saved successfully',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.teal.shade700,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   Widget _buildTextField(
@@ -248,19 +278,15 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
     return Scaffold(
       body: Row(
         children: [
-          // 🔹 Side Menu
           SideMenu(
             centerId: widget.centerId,
             centerName: widget.centerName,
             selectedMenu: "Patients",
           ),
-
-          // 🔹 Main Content
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ✅ Header (same as home_screen.dart)
                 Container(
                   color: const Color(0xFF045347),
                   padding: const EdgeInsets.symmetric(vertical: 16),
@@ -280,8 +306,6 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
                     ],
                   ),
                 ),
-
-                // ✅ Main Scrollable Body
                 Expanded(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(20),
@@ -290,7 +314,6 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Date Picker Card
                           Card(
                             elevation: 2,
                             shape: RoundedRectangleBorder(
@@ -317,16 +340,12 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
                                 ),
                                 child: const Text(
                                   "Change",
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                  ), // ✅ White text
+                                  style: TextStyle(color: Colors.white),
                                 ),
                               ),
                             ),
                           ),
                           const SizedBox(height: 20),
-
-                          // Dialysis Info
                           _buildSectionHeader(
                             "Dialysis Information",
                             Icons.local_hospital,
@@ -361,10 +380,7 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
                               ),
                             ),
                           ),
-
                           const SizedBox(height: 24),
-
-                          // Vital Signs
                           _buildSectionHeader(
                             "Vital Signs",
                             Icons.monitor_heart,
@@ -390,10 +406,8 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
                                   _buildTextField(
                                     "Temperature (°C)",
                                     _tempController,
-                                    keyboard:
-                                        const TextInputType.numberWithOptions(
-                                          decimal: true,
-                                        ),
+                                    keyboard: const TextInputType
+                                        .numberWithOptions(decimal: true),
                                   ),
                                   _buildTextField(
                                     "Respiration Rate",
@@ -407,7 +421,6 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
                               ),
                             ),
                           ),
-
                           const SizedBox(height: 80),
                         ],
                       ),
