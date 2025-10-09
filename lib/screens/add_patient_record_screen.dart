@@ -16,7 +16,8 @@ class AddPatientRecordScreen extends StatefulWidget {
   });
 
   @override
-  State<AddPatientRecordScreen> createState() => _AddPatientRecordScreenState();
+  State<AddPatientRecordScreen> createState() =>
+      _AddPatientRecordScreenState();
 }
 
 class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
@@ -34,6 +35,9 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
 
   DateTime _selectedDate = DateTime.now();
 
+  // 🔹 Store nurse info after verification
+  Map<String, dynamic>? _verifiedNurse;
+
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
@@ -44,7 +48,95 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
     if (picked != null) setState(() => _selectedDate = picked);
   }
 
+  // 🔹 Show nurse verification dialog
+  Future<Map<String, dynamic>?> _showNurseVerificationDialog() async {
+    final TextEditingController pinController = TextEditingController();
+    String? selectedNurse;
+    List<QueryDocumentSnapshot> nurseDocs = [];
+
+    // Fetch nurses under this center
+    final snapshot = await FirebaseFirestore.instance
+        .collection('centers')
+        .doc(widget.centerId)
+        .collection('nurses')
+        .get();
+
+    nurseDocs = snapshot.docs;
+
+    return showDialog<Map<String, dynamic>?>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Nurse Verification'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<String>(
+                decoration: const InputDecoration(labelText: 'Select Nurse'),
+                items: nurseDocs.map((doc) {
+                  return DropdownMenuItem<String>(
+                    value: doc.id,
+                    child: Text(doc['name']),
+                  );
+                }).toList(),
+                onChanged: (value) => selectedNurse = value,
+              ),
+              TextField(
+                controller: pinController,
+                decoration: const InputDecoration(labelText: 'Enter PIN'),
+                obscureText: true,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (selectedNurse == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please select a nurse')),
+                  );
+                  return;
+                }
+
+                final nurseDoc = nurseDocs.firstWhere(
+                    (doc) => doc.id == selectedNurse,
+                    orElse: () => throw Exception('Nurse not found'));
+
+                if (nurseDoc['pin'] == pinController.text.trim()) {
+                  Navigator.pop(context, {
+                    'nurseId': nurseDoc.id,
+                    'nurseName': nurseDoc['name'],
+                  });
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Invalid PIN')),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.teal.shade700,
+              ),
+              child: const Text('Verify', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> _saveRecord() async {
+    // 🧩 Require nurse verification first
+    if (_verifiedNurse == null) {
+      final nurseInfo = await _showNurseVerificationDialog();
+      if (nurseInfo == null) return; // cancelled
+      setState(() => _verifiedNurse = nurseInfo);
+    }
+
     final Map<String, dynamic> record = {};
 
     void addIfNotEmpty(
@@ -53,11 +145,10 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
       bool isNumber = false,
     }) {
       if (controller.text.trim().isNotEmpty) {
-        record[key] =
-            isNumber
-                ? double.tryParse(controller.text.trim()) ??
-                    controller.text.trim()
-                : controller.text.trim();
+        record[key] = isNumber
+            ? double.tryParse(controller.text.trim()) ??
+                controller.text.trim()
+            : controller.text.trim();
       }
     }
 
@@ -74,30 +165,33 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
     record["date"] = _selectedDate.toIso8601String().split("T").first;
     record["createdAt"] = FieldValue.serverTimestamp();
 
+    // 🧩 Include nurse info
+    record["enteredBy"] = _verifiedNurse;
+
     final recordRef = FirebaseFirestore.instance
         .collection("users")
         .doc(widget.patientId)
         .collection("records")
         .doc(_selectedDate.toIso8601String().split("T").first);
 
-    // 🔹 Check if this record already exists
     final existingRecord = await recordRef.get();
     final isUpdate = existingRecord.exists;
 
-    // 🔹 Save or update record
     await recordRef.set(record, SetOptions(merge: true));
 
-    // 🟢 Send Patient Notification
+    // 🟢 Notifications (same as before)
     try {
       String title;
       String message;
 
       if (!isUpdate) {
         title = "New Dialysis Record Added";
-        message = "Nurse added your dialysis record today.";
+        message =
+            "Nurse ${_verifiedNurse?['nurseName'] ?? ''} added your dialysis record today.";
       } else {
         title = "Dialysis Record Updated";
-        message = "Nurse updated your dialysis record today.";
+        message =
+            "Nurse ${_verifiedNurse?['nurseName'] ?? ''} updated your dialysis record today.";
       }
 
       await FirebaseFirestore.instance
@@ -110,13 +204,10 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
         'createdAt': FieldValue.serverTimestamp(),
         'read': false,
       });
-
-      debugPrint("✅ Patient notified: $title");
     } catch (e) {
       debugPrint("⚠️ Error sending patient notification: $e");
     }
 
-    // 🟢 Send Doctor Notification (if assigned)
     try {
       final patientDoc = await FirebaseFirestore.instance
           .collection('users')
@@ -143,7 +234,8 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
             'oxygenSaturation',
           ];
 
-          final hasDialysis = record.keys.any((k) => dialysisFields.contains(k));
+          final hasDialysis =
+              record.keys.any((k) => dialysisFields.contains(k));
           final hasVitals = record.keys.any((k) => vitalFields.contains(k));
 
           String title;
@@ -154,27 +246,28 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
             if (hasDialysis && hasVitals) {
               title = 'New Dialysis Record Added';
               message =
-                  'Nurse added dialysis information and vital signs for $firstName $lastName.';
+                  'Nurse ${_verifiedNurse?['nurseName'] ?? ''} added dialysis information and vital signs for $firstName $lastName.';
               category = 'vitals_and_dialysis';
             } else if (hasDialysis) {
               title = 'New Dialysis Record Added';
               message =
-                  'Nurse added dialysis information for $firstName $lastName.';
+                  'Nurse ${_verifiedNurse?['nurseName'] ?? ''} added dialysis information for $firstName $lastName.';
               category = 'dialysis';
             } else if (hasVitals) {
               title = 'New Vital Signs Added';
-              message = 'Nurse added vital signs for $firstName $lastName.';
+              message =
+                  'Nurse ${_verifiedNurse?['nurseName'] ?? ''} added vital signs for $firstName $lastName.';
               category = 'vitals';
             } else {
               title = 'New Patient Record Added';
               message =
-                  'Nurse added a new record for $firstName $lastName.';
+                  'Nurse ${_verifiedNurse?['nurseName'] ?? ''} added a new record for $firstName $lastName.';
               category = 'record';
             }
           } else {
             title = 'Dialysis Record Updated';
             message =
-                'Nurse updated dialysis record for $firstName $lastName.';
+                'Nurse ${_verifiedNurse?['nurseName'] ?? ''} updated dialysis record for $firstName $lastName.';
             category = 'record_update';
           }
 
@@ -190,15 +283,12 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
             'read': false,
             'category': category,
           });
-
-          debugPrint("✅ Doctor notified: $title");
         }
       }
     } catch (e) {
       debugPrint('⚠️ Error sending doctor notification: $e');
     }
 
-    // 🟢 Show confirmation to nurse
     Navigator.pop(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -406,8 +496,7 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
                                   _buildTextField(
                                     "Temperature (°C)",
                                     _tempController,
-                                    keyboard: const TextInputType
-                                        .numberWithOptions(decimal: true),
+                                    keyboard: const TextInputType.numberWithOptions(decimal: true),
                                   ),
                                   _buildTextField(
                                     "Respiration Rate",

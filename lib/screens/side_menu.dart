@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'nurses_screen.dart'; // ✅ make sure this file exists
 
 class SideMenu extends StatelessWidget {
   final String centerId;
@@ -13,7 +14,6 @@ class SideMenu extends StatelessWidget {
     this.selectedMenu = 'Home',
   });
 
-  // Define your custom brand colors
   static const Color primaryColor = Color(0xFF056C5B);
   static const Color darkerPrimaryColor = Color(0xFF045347);
 
@@ -23,6 +23,7 @@ class SideMenu extends StatelessWidget {
     required String title,
     required bool selected,
     required String routeName,
+    VoidCallback? onTapOverride,
   }) {
     return ListTile(
       leading: Icon(icon, color: Colors.white),
@@ -35,7 +36,12 @@ class SideMenu extends StatelessWidget {
       ),
       tileColor: selected ? primaryColor : darkerPrimaryColor,
       onTap: () async {
-        // If About Center, fetch details from Firebase
+        if (onTapOverride != null) {
+          onTapOverride();
+          return;
+        }
+
+        // 🔹 If About Center, fetch details from Firebase first
         if (routeName == '/aboutCenter') {
           final doc = await FirebaseFirestore.instance
               .collection('centers')
@@ -50,13 +56,12 @@ class SideMenu extends StatelessWidget {
           }
 
           final data = doc.data()!;
-
           Navigator.pushReplacementNamed(
             context,
             routeName,
             arguments: {
               'centerId': centerId,
-              'centerName': centerName, // ✅ keep original name
+              'centerName': centerName,
               'address': data['address'] ?? '',
               'contactNumber': data['contactNumber'] ?? '',
               'missionVision': data['missionVision'] ?? '',
@@ -64,13 +69,13 @@ class SideMenu extends StatelessWidget {
             },
           );
         } else {
-          // Default navigation for other menu items
+          // 🔹 Default navigation for other menu items
           Navigator.pushReplacementNamed(
             context,
             routeName,
             arguments: {
               'centerId': centerId,
-              'centerName': centerName, // ✅ always keep this consistent
+              'centerName': centerName,
             },
           );
         }
@@ -85,6 +90,7 @@ class SideMenu extends StatelessWidget {
       color: darkerPrimaryColor,
       child: Column(
         children: [
+          // 🔹 Header
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             child: Row(
@@ -113,6 +119,7 @@ class SideMenu extends StatelessWidget {
             ),
           ),
 
+          // 🔹 Menu Items
           _buildMenuItem(
             context: context,
             icon: Icons.home,
@@ -133,6 +140,22 @@ class SideMenu extends StatelessWidget {
             title: 'Doctors',
             selected: selectedMenu == 'Doctors',
             routeName: '/doctors',
+          ),
+          // 🧑‍⚕️ NEW NURSES SECTION
+          _buildMenuItem(
+            context: context,
+            icon: Icons.medical_services,
+            title: 'Nurses',
+            selected: selectedMenu == 'Nurses',
+            routeName: '/nurses',
+            onTapOverride: () {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => NursesScreen(centerId: centerId),
+                ),
+              );
+            },
           ),
           _buildMenuItem(
             context: context,
