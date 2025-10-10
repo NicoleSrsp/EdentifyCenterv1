@@ -152,7 +152,7 @@ class SideMenu extends StatelessWidget {
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => NursesScreen(centerId: centerId),
+                  builder: (context) => NursesScreen(centerId: centerId, centerName: 'Center',),
                 ),
               );
             },
