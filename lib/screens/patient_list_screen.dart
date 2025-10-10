@@ -22,6 +22,9 @@ class _PatientListScreenState extends State<PatientListScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchText = '';
 
+  // Sorting option
+  String _sortOption = 'Name (A–Z)';
+
   // Custom brand colors
   static const Color primaryColor = Color(0xFF056C5B);
   static const Color darkerPrimaryColor = Color(0xFF045347);
@@ -392,12 +395,29 @@ class _PatientListScreenState extends State<PatientListScreen> {
               }).toList();
         }
 
+        // ✅ Updated Sorting Logic
         docs.sort((a, b) {
-          final nameA =
-              _getFullName(a.data() as Map<String, dynamic>).toLowerCase();
-          final nameB =
-              _getFullName(b.data() as Map<String, dynamic>).toLowerCase();
-          return nameA.compareTo(nameB);
+          final dataA = a.data() as Map<String, dynamic>;
+          final dataB = b.data() as Map<String, dynamic>;
+
+          final nameA = _getFullName(dataA).toLowerCase();
+          final nameB = _getFullName(dataB).toLowerCase();
+
+          final timeA =
+              (dataA['createdAt'] as Timestamp?)?.toDate() ?? DateTime(0);
+          final timeB =
+              (dataB['createdAt'] as Timestamp?)?.toDate() ?? DateTime(0);
+
+          switch (_sortOption) {
+            case 'Name (Z–A)':
+              return nameB.compareTo(nameA);
+            case 'Newest':
+              return timeB.compareTo(timeA);
+            case 'Oldest':
+              return timeA.compareTo(timeB);
+            default:
+              return nameA.compareTo(nameB);
+          }
         });
 
         if (docs.isEmpty) {
@@ -534,6 +554,65 @@ class _PatientListScreenState extends State<PatientListScreen> {
                     ],
                   ),
                 ),
+
+                // ✅ Sorting Dropdown UI
+                // ✅ Sorting Dropdown UI
+                Padding(
+                  padding: const EdgeInsets.only(
+                    left: 24.0,
+                    right: 24.0,
+                    bottom: 8.0,
+                  ),
+                  child: Row(
+                    children: [
+                      const Text(
+                        'Sort by: ',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF045347),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      DropdownButton<String>(
+                        value: _sortOption,
+                        dropdownColor:
+                            Colors.white, // ✅ Removes the gray background
+                        underline:
+                            const SizedBox(), // ✅ Removes the default underline
+                        style: const TextStyle(
+                          color: Color(0xFF045347),
+                        ), // ✅ Matches theme
+                        borderRadius: BorderRadius.circular(8),
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'Name (A–Z)',
+                            child: Text('Name (A–Z)'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'Name (Z–A)',
+                            child: Text('Name (Z–A)'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'Newest',
+                            child: Text('Newest'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'Oldest',
+                            child: Text('Oldest'),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          if (value != null) {
+                            setState(() {
+                              _sortOption = value;
+                            });
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+
                 const SizedBox(height: 8),
                 Expanded(child: _buildPatientList()),
               ],
