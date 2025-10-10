@@ -23,7 +23,7 @@ class _PatientListScreenState extends State<PatientListScreen> {
   String _searchText = '';
 
   // Sorting option
-  String _sortOption = 'Name (A–Z)';
+  String _sortOption = 'Last Name (A–Z)';
 
   // Custom brand colors
   static const Color primaryColor = Color(0xFF056C5B);
@@ -400,8 +400,12 @@ class _PatientListScreenState extends State<PatientListScreen> {
           final dataA = a.data() as Map<String, dynamic>;
           final dataB = b.data() as Map<String, dynamic>;
 
-          final nameA = _getFullName(dataA).toLowerCase();
-          final nameB = _getFullName(dataB).toLowerCase();
+          final firstNameA =
+              (dataA['firstName'] ?? '').toString().toLowerCase();
+          final firstNameB =
+              (dataB['firstName'] ?? '').toString().toLowerCase();
+          final lastNameA = (dataA['lastName'] ?? '').toString().toLowerCase();
+          final lastNameB = (dataB['lastName'] ?? '').toString().toLowerCase();
 
           final timeA =
               (dataA['createdAt'] as Timestamp?)?.toDate() ?? DateTime(0);
@@ -409,14 +413,18 @@ class _PatientListScreenState extends State<PatientListScreen> {
               (dataB['createdAt'] as Timestamp?)?.toDate() ?? DateTime(0);
 
           switch (_sortOption) {
-            case 'Name (Z–A)':
-              return nameB.compareTo(nameA);
+            case 'Last Name (Z–A)':
+              return lastNameB.compareTo(lastNameA);
+            case 'First Name (A–Z)':
+              return firstNameA.compareTo(firstNameB);
+            case 'First Name (Z–A)':
+              return firstNameB.compareTo(firstNameA);
             case 'Newest':
               return timeB.compareTo(timeA);
             case 'Oldest':
               return timeA.compareTo(timeB);
-            default:
-              return nameA.compareTo(nameB);
+            default: // Last Name (A–Z)
+              return lastNameA.compareTo(lastNameB);
           }
         });
 
@@ -556,7 +564,6 @@ class _PatientListScreenState extends State<PatientListScreen> {
                 ),
 
                 // ✅ Sorting Dropdown UI
-                // ✅ Sorting Dropdown UI
                 Padding(
                   padding: const EdgeInsets.only(
                     left: 24.0,
@@ -575,22 +582,26 @@ class _PatientListScreenState extends State<PatientListScreen> {
                       const SizedBox(width: 8),
                       DropdownButton<String>(
                         value: _sortOption,
-                        dropdownColor:
-                            Colors.white, // ✅ Removes the gray background
-                        underline:
-                            const SizedBox(), // ✅ Removes the default underline
-                        style: const TextStyle(
-                          color: Color(0xFF045347),
-                        ), // ✅ Matches theme
+                        dropdownColor: Colors.white,
+                        underline: const SizedBox(),
+                        style: const TextStyle(color: Color(0xFF045347)),
                         borderRadius: BorderRadius.circular(8),
                         items: const [
                           DropdownMenuItem(
-                            value: 'Name (A–Z)',
-                            child: Text('Name (A–Z)'),
+                            value: 'Last Name (A–Z)',
+                            child: Text('Last Name (A–Z)'),
                           ),
                           DropdownMenuItem(
-                            value: 'Name (Z–A)',
-                            child: Text('Name (Z–A)'),
+                            value: 'Last Name (Z–A)',
+                            child: Text('Last Name (Z–A)'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'First Name (A–Z)',
+                            child: Text('First Name (A–Z)'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'First Name (Z–A)',
+                            child: Text('First Name (Z–A)'),
                           ),
                           DropdownMenuItem(
                             value: 'Newest',
