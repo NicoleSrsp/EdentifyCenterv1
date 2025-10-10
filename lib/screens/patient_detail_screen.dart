@@ -20,6 +20,9 @@ class PatientDetailScreen extends StatefulWidget {
 }
 
 class _PatientDetailScreenState extends State<PatientDetailScreen> {
+  // 🔹 Store verified nurse after verification (used when editing)
+  Map<String, dynamic>? _verifiedNurse;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -254,9 +257,48 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                                                   fontWeight: FontWeight.bold,
                                                 ),
                                               ),
-                                              subtitle: Text(
-                                                "Pre-Weight: ${record['preWeight'] ?? ''} | Post-Weight: ${record['postWeight'] ?? ''}",
+                                              subtitle: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    "Pre-Weight: ${record['preWeight'] ?? ''} | Post-Weight: ${record['postWeight'] ?? ''}",
+                                                  ),
+                                                  const SizedBox(height: 4),
+
+                                                  // ✅ If record was updated, show "Updated by Nurse X"
+                                                  if (record['updatedBy'] !=
+                                                          null &&
+                                                      record['updatedBy']
+                                                          .toString()
+                                                          .isNotEmpty)
+                                                    Text(
+                                                      "Updated by Nurse ${record['updatedBy']}",
+                                                      style: const TextStyle(
+                                                        fontSize: 13,
+                                                        color: Colors.orange,
+                                                        fontStyle:
+                                                            FontStyle.italic,
+                                                      ),
+                                                    )
+                                                  // ✅ Else if only nurseName exists (new record), show "Added by Nurse X"
+                                                  else if (record['nurseName'] !=
+                                                          null &&
+                                                      record['nurseName']
+                                                          .toString()
+                                                          .isNotEmpty)
+                                                    Text(
+                                                      "Added by Nurse ${record['nurseName']}",
+                                                      style: const TextStyle(
+                                                        fontSize: 13,
+                                                        color: Colors.grey,
+                                                        fontStyle:
+                                                            FontStyle.italic,
+                                                      ),
+                                                    ),
+                                                ],
                                               ),
+
                                               trailing: IconButton(
                                                 icon: const Icon(
                                                   Icons.edit,
@@ -488,6 +530,15 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                           ),
                           onPressed: () async {
                             if (_formKey.currentState!.validate()) {
+                              // --- NEW: Require nurse verification before applying updates ---
+                              final nurseInfo =
+                                  await _promptNurseVerification();
+                              if (nurseInfo == null) {
+                                // canceled or verification failed
+                                return;
+                              }
+
+                              // continue with original update logic, but include nurse info
                               final updatedData = {
                                 'preWeight': preWeightController.text,
                                 'postWeight': postWeightController.text,
@@ -499,6 +550,9 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                                 'respiration': respirationController.text,
                                 'oxygenSaturation': o2Controller.text,
                                 'updatedAt': FieldValue.serverTimestamp(),
+                                // add nurse who made the edit
+                                'updatedBy': _verifiedNurse?['nurseName'],
+                                'nurseName': nurseInfo['nurseName'],
                               };
 
                               // 🔹 Update record
@@ -514,6 +568,8 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                                 final changedFields = <String>[];
                                 updatedData.forEach((key, value) {
                                   if (key != 'updatedAt' &&
+                                      key != 'updatedBy' &&
+                                      key != 'nurseName' &&
                                       record[key]?.toString() !=
                                           value.toString()) {
                                     changedFields.add(key);
@@ -559,8 +615,8 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                                 // 🔹 Compose message
                                 final message =
                                     changedFields.isEmpty
-                                        ? 'Nurse saved your dialysis record today.'
-                                        : 'Nurse updated your $formattedFields today.';
+                                        ? 'Nurse ${_verifiedNurse?['nurseName']} saved your dialysis record today.'
+                                        : 'Nurse ${_verifiedNurse?['nurseName']} updated your $formattedFields today.';
 
                                 // 🔹 Send patient notification
                                 await FirebaseFirestore.instance
@@ -598,7 +654,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                                         .add({
                                           'title': 'Dialysis Record Updated',
                                           'message':
-                                              'Patient ${patientDoc['firstName']} ${patientDoc['lastName']} updated: $formattedFields.',
+                                              'Nurse ${_verifiedNurse?['nurseName']} updated $formattedFields for ${patientDoc['firstName']} ${patientDoc['lastName']}.',
                                           'patientId': patientId,
                                           'createdAt':
                                               FieldValue.serverTimestamp(),
@@ -697,5 +753,94 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
         ),
       ),
     );
+  }
+
+  // ------------------- Nurse verification helper -------------------
+  // Fetches nurses under center, shows dialog (select nurse + enter PIN),
+  // returns a Map { 'nurseId': id, 'nurseName': name } if verified, otherwise null.
+  Future<Map<String, dynamic>?> _promptNurseVerification() async {
+    final nursesRef = FirebaseFirestore.instance
+        .collection('centers')
+        .doc(widget.centerId)
+        .collection('nurses');
+
+    final nurseDocs = await nursesRef.get();
+    final nurseList =
+        nurseDocs.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList();
+
+    String? selectedNurseId;
+    final pinController = TextEditingController();
+
+    final result = await showDialog<Map<String, dynamic>?>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Nurse Verification"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<String>(
+                decoration: const InputDecoration(labelText: "Select Nurse"),
+                items:
+                    nurseList.map((nurse) {
+                      return DropdownMenuItem<String>(
+                        value: nurse['id'] as String?,
+                        child: Text(nurse['name'] ?? (nurse['id'] as String)),
+                      );
+                    }).toList(),
+                onChanged: (value) => selectedNurseId = value,
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: pinController,
+                obscureText: true,
+                decoration: const InputDecoration(labelText: "Enter PIN"),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              child: const Text("Cancel"),
+              onPressed: () => Navigator.pop(context, null),
+            ),
+            ElevatedButton(
+              child: const Text("Verify"),
+              onPressed: () async {
+                if (selectedNurseId == null || pinController.text.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Please select nurse and enter PIN"),
+                    ),
+                  );
+                  return;
+                }
+
+                final nurseDoc = await nursesRef.doc(selectedNurseId).get();
+                if (nurseDoc.exists &&
+                    nurseDoc['pin'] == pinController.text.trim()) {
+                  Navigator.pop(context, {
+                    'nurseId': selectedNurseId,
+                    'nurseName': nurseDoc['name'],
+                  });
+                  return;
+                } else {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(const SnackBar(content: Text("Invalid PIN")));
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+
+    // Save locally for display if needed
+    if (result != null) {
+      setState(() => _verifiedNurse = result);
+    }
+
+    return result;
   }
 }

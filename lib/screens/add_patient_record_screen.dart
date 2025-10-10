@@ -167,6 +167,7 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
 
     // 🧩 Include nurse info
     record["enteredBy"] = _verifiedNurse;
+    record["nurseName"] = _verifiedNurse?['nurseName']; // ✅ add for visibility
 
     final recordRef = FirebaseFirestore.instance
         .collection("users")
@@ -179,7 +180,7 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
 
     await recordRef.set(record, SetOptions(merge: true));
 
-    // 🟢 Notifications (same as before)
+    // 🟢 Patient notification
     try {
       String title;
       String message;
@@ -208,6 +209,7 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
       debugPrint("⚠️ Error sending patient notification: $e");
     }
 
+    // 🟣 Doctor notification
     try {
       final patientDoc = await FirebaseFirestore.instance
           .collection('users')
