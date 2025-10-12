@@ -16,8 +16,7 @@ class AddPatientRecordScreen extends StatefulWidget {
   });
 
   @override
-  State<AddPatientRecordScreen> createState() =>
-      _AddPatientRecordScreenState();
+  State<AddPatientRecordScreen> createState() => _AddPatientRecordScreenState();
 }
 
 class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
@@ -55,11 +54,12 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
     List<QueryDocumentSnapshot> nurseDocs = [];
 
     // Fetch nurses under this center
-    final snapshot = await FirebaseFirestore.instance
-        .collection('centers')
-        .doc(widget.centerId)
-        .collection('nurses')
-        .get();
+    final snapshot =
+        await FirebaseFirestore.instance
+            .collection('centers')
+            .doc(widget.centerId)
+            .collection('nurses')
+            .get();
 
     nurseDocs = snapshot.docs;
 
@@ -74,12 +74,13 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
             children: [
               DropdownButtonFormField<String>(
                 decoration: const InputDecoration(labelText: 'Select Nurse'),
-                items: nurseDocs.map((doc) {
-                  return DropdownMenuItem<String>(
-                    value: doc.id,
-                    child: Text(doc['name']),
-                  );
-                }).toList(),
+                items:
+                    nurseDocs.map((doc) {
+                      return DropdownMenuItem<String>(
+                        value: doc.id,
+                        child: Text(doc['name']),
+                      );
+                    }).toList(),
                 onChanged: (value) => selectedNurse = value,
               ),
               TextField(
@@ -104,8 +105,9 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
                 }
 
                 final nurseDoc = nurseDocs.firstWhere(
-                    (doc) => doc.id == selectedNurse,
-                    orElse: () => throw Exception('Nurse not found'));
+                  (doc) => doc.id == selectedNurse,
+                  orElse: () => throw Exception('Nurse not found'),
+                );
 
                 if (nurseDoc['pin'] == pinController.text.trim()) {
                   Navigator.pop(context, {
@@ -113,15 +115,18 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
                     'nurseName': nurseDoc['name'],
                   });
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Invalid PIN')),
-                  );
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(const SnackBar(content: Text('Invalid PIN')));
                 }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.teal.shade700,
               ),
-              child: const Text('Verify', style: TextStyle(color: Colors.white)),
+              child: const Text(
+                'Verify',
+                style: TextStyle(color: Colors.white),
+              ),
             ),
           ],
         );
@@ -130,7 +135,7 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
   }
 
   Future<void> _saveRecord() async {
-    // 🧩 Require nurse verification first
+    // 🧩 Require nurse verification first     
     if (_verifiedNurse == null) {
       final nurseInfo = await _showNurseVerificationDialog();
       if (nurseInfo == null) return; // cancelled
@@ -145,10 +150,11 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
       bool isNumber = false,
     }) {
       if (controller.text.trim().isNotEmpty) {
-        record[key] = isNumber
-            ? double.tryParse(controller.text.trim()) ??
-                controller.text.trim()
-            : controller.text.trim();
+        record[key] =
+            isNumber
+                ? double.tryParse(controller.text.trim()) ??
+                    controller.text.trim()
+                : controller.text.trim();
       }
     }
 
@@ -197,24 +203,27 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
 
       await FirebaseFirestore.instance
           .collection('users')
-          .doc(widget.patientId)
+          .doc(widget.patientId.trim()) // ✅ ensure no spaces
           .collection('notifications')
           .add({
-        'title': title,
-        'message': message,
-        'createdAt': FieldValue.serverTimestamp(),
-        'read': false,
-      });
+            'title': title,
+            'message': message,
+            'createdAt': Timestamp.now(), // ✅ use actual timestamp
+            'read': false,
+          });
+
+      debugPrint("✅ Notification added for user ${widget.patientId}");
     } catch (e) {
       debugPrint("⚠️ Error sending patient notification: $e");
     }
 
     // 🟣 Doctor notification
     try {
-      final patientDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(widget.patientId)
-          .get();
+      final patientDoc =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(widget.patientId)
+              .get();
 
       if (patientDoc.exists && patientDoc.data()!.containsKey('doctorId')) {
         final doctorId = patientDoc['doctorId'];
@@ -236,8 +245,9 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
             'oxygenSaturation',
           ];
 
-          final hasDialysis =
-              record.keys.any((k) => dialysisFields.contains(k));
+          final hasDialysis = record.keys.any(
+            (k) => dialysisFields.contains(k),
+          );
           final hasVitals = record.keys.any((k) => vitalFields.contains(k));
 
           String title;
@@ -278,13 +288,13 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
               .doc(doctorId)
               .collection('notifications')
               .add({
-            'title': title,
-            'message': message,
-            'patientId': widget.patientId,
-            'createdAt': FieldValue.serverTimestamp(),
-            'read': false,
-            'category': category,
-          });
+                'title': title,
+                'message': message,
+                'patientId': widget.patientId,
+                'createdAt': FieldValue.serverTimestamp(),
+                'read': false,
+                'category': category,
+              });
         }
       }
     } catch (e) {
@@ -498,7 +508,10 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
                                   _buildTextField(
                                     "Temperature (°C)",
                                     _tempController,
-                                    keyboard: const TextInputType.numberWithOptions(decimal: true),
+                                    keyboard:
+                                        const TextInputType.numberWithOptions(
+                                          decimal: true,
+                                        ),
                                   ),
                                   _buildTextField(
                                     "Respiration Rate",

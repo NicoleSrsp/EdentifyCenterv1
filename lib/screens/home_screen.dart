@@ -614,7 +614,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             FilledButton.icon(
                               onPressed: _addPatient,
                               icon: const Icon(Icons.person_add),
-                              label: const Text('Add Patient'),
+                              label: const Text('Add Schedule'),
                             ),
                           ],
                         ),
