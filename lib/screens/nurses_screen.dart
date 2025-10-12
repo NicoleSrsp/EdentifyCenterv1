@@ -55,17 +55,99 @@ class _NursesScreenState extends State<NursesScreen> {
     }
   }
 
-  Future<void> _deleteNurse(String nurseId) async {
-    await FirebaseFirestore.instance
-        .collection('centers')
-        .doc(widget.centerId)
-        .collection('nurses')
-        .doc(nurseId)
-        .delete();
+  Future<void> _confirmAndDeleteNurse(
+      String nurseId, String nurseName, String storedPin) async {
+    final pinController = TextEditingController();
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Nurse deleted')),
+    // Step 1: Confirmation dialog
+    final confirmDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Confirm Deletion'),
+          content: Text(
+              'Are you sure you want to delete Nurse "$nurseName"? This action cannot be undone.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
     );
+
+    if (confirmDelete != true) return; // cancelled
+
+    // Step 2: PIN verification dialog
+    final enteredPin = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('PIN Verification'),
+          content: TextField(
+            controller: pinController,
+            obscureText: true,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: 'Enter Nurse PIN',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () =>
+                  Navigator.pop(context, pinController.text.trim()),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF045347),
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Verify'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (enteredPin == null || enteredPin.isEmpty) return;
+
+    // Step 3: Check if entered PIN matches stored PIN
+    if (enteredPin != storedPin) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Incorrect PIN. Deletion cancelled.')),
+      );
+      return;
+    }
+
+    // Step 4: Proceed with deletion
+    try {
+      await FirebaseFirestore.instance
+          .collection('centers')
+          .doc(widget.centerId)
+          .collection('nurses')
+          .doc(nurseId)
+          .delete();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Nurse "$nurseName" deleted successfully.')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error deleting nurse: $e')),
+      );
+    }
   }
 
   @override
@@ -112,8 +194,8 @@ class _NursesScreenState extends State<NursesScreen> {
                 // ✅ MAIN CONTENT
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 32, vertical: 24),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
                     child: SingleChildScrollView(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -326,8 +408,11 @@ class _NursesScreenState extends State<NursesScreen> {
                                       trailing: IconButton(
                                         icon: const Icon(Icons.delete_outline,
                                             color: Colors.redAccent),
-                                        onPressed: () =>
-                                            _deleteNurse(nurse.id),
+                                        onPressed: () => _confirmAndDeleteNurse(
+                                          nurse.id,
+                                          name,
+                                          pin,
+                                        ),
                                       ),
                                     ),
                                   );
