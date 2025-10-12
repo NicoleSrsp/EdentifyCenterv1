@@ -20,22 +20,23 @@ class AboutScreen extends StatelessWidget {
       backgroundColor: Colors.grey[50],
       body: Row(
         children: [
-          // ✅ Sidebar (keep consistent)
+          // ✅ Sidebar
           SideMenu(
             centerId: centerId,
             centerName: centerName,
             selectedMenu: 'About Center',
           ),
 
-          // ✅ Main Content Area
+          // ✅ Main Content
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ✅ Header (EXACT same as home_screen.dart)
+                // ✅ Header
                 Container(
                   color: const Color(0xFF045347),
-                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
                   width: double.infinity,
                   child: Row(
                     children: [
@@ -52,7 +53,7 @@ class AboutScreen extends StatelessWidget {
                   ),
                 ),
 
-                // ✅ Scrollable Content
+                // ✅ Scrollable Area
                 Expanded(
                   child: FutureBuilder<DocumentSnapshot>(
                     future: FirebaseFirestore.instance
@@ -67,9 +68,7 @@ class AboutScreen extends StatelessWidget {
                         return Center(child: Text('Error: ${snapshot.error}'));
                       }
                       if (!snapshot.hasData || !snapshot.data!.exists) {
-                        return const Center(
-                          child: Text('Failed to load center data'),
-                        );
+                        return const Center(child: Text('Center data not found.'));
                       }
 
                       final data = snapshot.data!.data() as Map<String, dynamic>;
@@ -79,101 +78,8 @@ class AboutScreen extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // 🔹 Center Info Card
+                            // 🔹 Introduction Card
                             Container(
-                              padding: const EdgeInsets.all(24),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.08),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  CircleAvatar(
-                                    radius: 45,
-                                    backgroundColor: Colors.teal.shade50,
-                                    child: const Icon(
-                                      Icons.local_hospital,
-                                      size: 42,
-                                      color: Color(0xFF045347),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 20),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          data['name'] ?? centerName,
-                                          style: const TextStyle(
-                                            fontSize: 26,
-                                            fontWeight: FontWeight.bold,
-                                            color: Color(0xFF045347),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Row(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            const Icon(
-                                              Icons.location_on,
-                                              color: Colors.teal,
-                                              size: 20,
-                                            ),
-                                            const SizedBox(width: 4),
-                                            Expanded(
-                                              child: Text(
-                                                data['address'] ??
-                                                    'No address provided',
-                                                style: TextStyle(
-                                                  fontSize: 16,
-                                                  color: Colors.grey.shade800,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 6),
-                                        Row(
-                                          children: [
-                                            const Icon(
-                                              Icons.phone,
-                                              color: Colors.teal,
-                                              size: 20,
-                                            ),
-                                            const SizedBox(width: 4),
-                                            Text(
-                                              data['contactNumber'] ??
-                                                  'No contact number',
-                                              style: const TextStyle(
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.w500,
-                                                color: Colors.black87,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                            const SizedBox(height: 30),
-
-                            // 🔹 Mission and Vision Section
-                            Container(
-                              width: double.infinity,
                               padding: const EdgeInsets.all(24),
                               decoration: BoxDecoration(
                                 color: Colors.white,
@@ -191,31 +97,31 @@ class AboutScreen extends StatelessWidget {
                                 children: [
                                   Row(
                                     children: const [
-                                      Icon(
-                                        Icons.flag_rounded,
-                                        color: Colors.teal,
-                                        size: 26,
-                                      ),
-                                      SizedBox(width: 8),
+                                      Icon(Icons.local_hospital_rounded,
+                                          color: Color(0xFF045347), size: 36),
+                                      SizedBox(width: 10),
                                       Text(
-                                        "Our Mission & Vision",
+                                        "About Edentify",
                                         style: TextStyle(
-                                          fontSize: 22,
+                                          fontSize: 26,
                                           fontWeight: FontWeight.bold,
                                           color: Color(0xFF045347),
                                         ),
                                       ),
                                     ],
                                   ),
-                                  const SizedBox(height: 14),
+                                  const SizedBox(height: 16),
                                   Text(
-                                    data['mission'] ??
-                                        'No mission or vision provided yet.',
+                                    "Welcome to Edentify — a digital healthcare platform built to revolutionize the way dialysis patients, nurses, and doctors connect. "
+                                    "Our goal is to make healthcare smarter, simpler, and more accessible through technology that promotes collaboration and timely care. "
+                                    "Edentify bridges the gap between patients and healthcare professionals by providing real-time updates, accurate health monitoring, "
+                                    "and secure data management powered by Firestore. Together, we are shaping a future where technology and compassion work hand in hand to improve lives.",
                                     style: const TextStyle(
                                       fontSize: 16,
-                                      height: 1.6,
+                                      height: 1.8,
                                       color: Colors.black87,
                                     ),
+                                    textAlign: TextAlign.justify,
                                   ),
                                 ],
                               ),
@@ -223,55 +129,64 @@ class AboutScreen extends StatelessWidget {
 
                             const SizedBox(height: 30),
 
-                            // 🔹 Additional Info (if any)
+                            // 🔹 Expandable Sections
+                            _buildExpansionTile(
+                              icon: Icons.apps_rounded,
+                              title: "System Overview",
+                              content:
+                                  "Edentify is composed of three interconnected platforms that work together to deliver continuous, coordinated healthcare:\n\n"
+                                  "• Mobile App (for Patients): Patients can scan their feet to detect edema levels (mild, normal, or severe), record their daily water intake, and monitor their health conveniently.\n\n"
+                                  "• Web App (for Nurses): Nurses can register new patients, manage dialysis schedules, and update vital signs — with every update instantly reflected in the patient’s app.\n\n"
+                                  "• Web App (for Doctors): Doctors receive real-time updates about patient scans and vital signs, and can add medical notes or recommendations for ongoing patient care.",
+                            ),
+                            _buildExpansionTile(
+                              icon: Icons.flag_rounded,
+                              title: "Mission and Vision",
+                              content:
+                                  "• Mission: To empower healthcare providers and dialysis patients through innovative, data-driven tools that support efficient monitoring, communication, and decision-making — ensuring better health outcomes for every patient.\n\n"
+                                  "• Vision: To become a trusted digital partner in healthcare, leading the way toward a connected ecosystem where every dialysis patient receives proactive, compassionate, and personalized care powered by technology.",
+                            ),
+                            _buildExpansionTile(
+                              icon: Icons.favorite_rounded,
+                              title: "Core Values",
+                              content:
+                                  "• Compassion: We put people first by delivering care that values every patient’s comfort and dignity.\n"
+                                  "• Innovation: We use technology as a bridge — transforming traditional healthcare processes into smarter, data-driven systems.\n"
+                                  "• Integrity: We uphold transparency, accuracy, and accountability in every aspect of our platform.\n"
+                                  "• Collaboration: We promote teamwork and communication among patients, nurses, and doctors to ensure holistic care.\n"
+                                  "• Accessibility: We strive to make health monitoring simple, inclusive, and affordable for all.",
+                            ),
+                            _buildExpansionTile(
+                              icon: Icons.verified_rounded,
+                              title: "Quality Policy",
+                              content:
+                                  "At Edentify, we are dedicated to building reliable, secure, and user-friendly healthcare solutions. "
+                                  "We continuously improve our platform through feedback, research, and innovation — ensuring that our technology meets the highest standards of safety, accuracy, and patient satisfaction.",
+                            ),
+                            _buildExpansionTile(
+                              icon: Icons.privacy_tip_rounded,
+                              title: "Privacy Statement",
+                              content:
+                                  "Your trust is our top priority. All personal and medical data — including health scans, vital signs, and user details — "
+                                  "are securely stored and processed through Firestore’s encrypted infrastructure. We strictly adhere to data protection standards and handle all information with confidentiality and care.",
+                            ),
+                            _buildExpansionTile(
+                              icon: Icons.cookie_rounded,
+                              title: "Cookie Policy",
+                              content:
+                                  "To enhance your browsing experience, Edentify may use cookies to personalize content, analyze performance, and improve usability. "
+                                  "You may adjust your cookie preferences through your browser settings at any time. We ensure transparency in how we collect and use non-sensitive data to enhance user experience.",
+                            ),
+
+                            const SizedBox(height: 30),
+
+                            // 🔹 Optional center description (from Firestore)
                             if (data['description'] != null &&
                                 (data['description'] as String).isNotEmpty)
-                              Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.all(24),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(16),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.08),
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ],
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: const [
-                                        Icon(
-                                          Icons.info_outline_rounded,
-                                          color: Colors.teal,
-                                          size: 26,
-                                        ),
-                                        SizedBox(width: 8),
-                                        Text(
-                                          "About This Center",
-                                          style: TextStyle(
-                                            fontSize: 22,
-                                            fontWeight: FontWeight.bold,
-                                            color: Color(0xFF045347),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 14),
-                                    Text(
-                                      data['description'],
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        height: 1.6,
-                                        color: Colors.black87,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                              _buildExpansionTile(
+                                icon: Icons.info_outline_rounded,
+                                title: "About This Center",
+                                content: data['description'],
                               ),
                           ],
                         ),
@@ -283,6 +198,59 @@ class AboutScreen extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // ✅ Improved Helper widget for clean and aligned ExpansionTiles
+  Widget _buildExpansionTile({
+    required IconData icon,
+    required String title,
+    required String content,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Theme(
+        data: ThemeData().copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          leading: Icon(icon, color: const Color(0xFF045347)),
+          title: Text(
+            title,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF045347),
+            ),
+          ),
+          childrenPadding:
+              const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                content,
+                style: const TextStyle(
+                  fontSize: 16,
+                  height: 1.8, // ✅ comfortable line spacing
+                  color: Colors.black87,
+                  letterSpacing: 0.2,
+                ),
+                textAlign: TextAlign.justify,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
