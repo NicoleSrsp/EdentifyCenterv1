@@ -47,7 +47,7 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
+                    horizontal: 16,
                     vertical: 16,
                   ),
                   color: darkerPrimaryColor,
@@ -66,10 +66,11 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(16),
                     child: StreamBuilder<DocumentSnapshot>(
-                      stream: FirebaseFirestore.instance
-                          .collection('doctor_inCharge')
-                          .doc(widget.doctorId)
-                          .snapshots(),
+                      stream:
+                          FirebaseFirestore.instance
+                              .collection('doctor_inCharge')
+                              .doc(widget.doctorId)
+                              .snapshots(),
                       builder: (context, snapshot) {
                         if (snapshot.connectionState ==
                             ConnectionState.waiting) {
@@ -84,7 +85,9 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                         final doctorData =
                             snapshot.data!.data() as Map<String, dynamic>;
                         final contact = doctorData['contact'] ?? '';
-                        final imageUrl = doctorData['imageUrl'] ?? '';
+                        final imageUrl = doctorData['photoUrl'] ?? '';
+                        final specialization =
+                            doctorData['specialization'] ?? '';
 
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -100,27 +103,29 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                                   decoration: BoxDecoration(
                                     color: primaryColor.withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(8),
-                                    image: imageUrl.isNotEmpty
-                                        ? DecorationImage(
-                                            image: NetworkImage(imageUrl),
-                                            fit: BoxFit.cover,
-                                          )
-                                        : null,
+                                    image:
+                                        imageUrl.isNotEmpty
+                                            ? DecorationImage(
+                                              image: NetworkImage(imageUrl),
+                                              fit: BoxFit.cover,
+                                            )
+                                            : null,
                                   ),
-                                  child: imageUrl.isEmpty
-                                      ? Center(
-                                          child: Text(
-                                            widget.doctorName.isNotEmpty
-                                                ? widget.doctorName[0]
-                                                : "?",
-                                            style: const TextStyle(
-                                              fontSize: 40,
-                                              fontWeight: FontWeight.bold,
-                                              color: primaryColor,
+                                  child:
+                                      imageUrl.isEmpty
+                                          ? Center(
+                                            child: Text(
+                                              widget.doctorName.isNotEmpty
+                                                  ? widget.doctorName[0]
+                                                  : "?",
+                                              style: const TextStyle(
+                                                fontSize: 40,
+                                                fontWeight: FontWeight.bold,
+                                                color: primaryColor,
+                                              ),
                                             ),
-                                          ),
-                                        )
-                                      : null,
+                                          )
+                                          : null,
                                 ),
                                 const SizedBox(width: 16),
 
@@ -186,21 +191,19 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
 
                             /// Patient List
                             StreamBuilder<QuerySnapshot>(
-                              stream: FirebaseFirestore.instance
-                                  .collection('users')
-                                  .where(
-                                    'doctorId',
-                                    isEqualTo: widget.doctorId,
-                                  )
-                                  .where(
-                                    'centerId',
-                                    isEqualTo: widget.centerId,
-                                  )
-                                  .where(
-                                    'status',
-                                    isEqualTo: 'active',
-                                  )
-                                  .snapshots(),
+                              stream:
+                                  FirebaseFirestore.instance
+                                      .collection('users')
+                                      .where(
+                                        'doctorId',
+                                        isEqualTo: widget.doctorId,
+                                      )
+                                      .where(
+                                        'centerId',
+                                        isEqualTo: widget.centerId,
+                                      )
+                                      .where('status', isEqualTo: 'active')
+                                      .snapshots(),
                               builder: (context, snapshot) {
                                 if (snapshot.connectionState ==
                                     ConnectionState.waiting) {
@@ -219,46 +222,55 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                                 final patients = snapshot.data!.docs.toList();
                                 patients.sort((a, b) {
                                   if (sortOption == "Name") {
-                                    final firstA = (a['firstName'] ?? '')
-                                        .toString()
-                                        .toLowerCase();
-                                    final firstB = (b['firstName'] ?? '')
-                                        .toString()
-                                        .toLowerCase();
-                                    final lastA = (a['lastName'] ?? '')
-                                        .toString()
-                                        .toLowerCase();
-                                    final lastB = (b['lastName'] ?? '')
-                                        .toString()
-                                        .toLowerCase();
+                                    final firstA =
+                                        (a['firstName'] ?? '')
+                                            .toString()
+                                            .toLowerCase();
+                                    final firstB =
+                                        (b['firstName'] ?? '')
+                                            .toString()
+                                            .toLowerCase();
+                                    final lastA =
+                                        (a['lastName'] ?? '')
+                                            .toString()
+                                            .toLowerCase();
+                                    final lastB =
+                                        (b['lastName'] ?? '')
+                                            .toString()
+                                            .toLowerCase();
 
-                                    final firstCompare =
-                                        firstA.compareTo(firstB);
+                                    final firstCompare = firstA.compareTo(
+                                      firstB,
+                                    );
                                     if (firstCompare != 0) return firstCompare;
                                     return lastA.compareTo(lastB);
                                   } else {
-                                    final mobileA = (a['mobileNumber'] ?? '')
-                                        .toString()
-                                        .toLowerCase();
-                                    final mobileB = (b['mobileNumber'] ?? '')
-                                        .toString()
-                                        .toLowerCase();
+                                    final mobileA =
+                                        (a['mobileNumber'] ?? '')
+                                            .toString()
+                                            .toLowerCase();
+                                    final mobileB =
+                                        (b['mobileNumber'] ?? '')
+                                            .toString()
+                                            .toLowerCase();
                                     return mobileA.compareTo(mobileB);
                                   }
                                 });
 
                                 return ListView.builder(
                                   shrinkWrap: true,
-                                  physics:
-                                      const NeverScrollableScrollPhysics(),
+                                  physics: const NeverScrollableScrollPhysics(),
                                   itemCount: patients.length,
                                   itemBuilder: (context, index) {
                                     final patient = patients[index];
-                                    final firstName =
-                                        patient['firstName'] ?? '';
-                                    final lastName = patient['lastName'] ?? '';
+                                    final data =
+                                        patient.data() as Map<String, dynamic>;
+                                    final firstName = data['firstName'] ?? '';
+                                    final lastName = data['lastName'] ?? '';
                                     final mobileNumber =
-                                        patient['mobileNumber'] ?? '';
+                                        data.containsKey('phone')
+                                            ? data['phone']
+                                            : 'N/A';
 
                                     return Card(
                                       margin: const EdgeInsets.symmetric(
