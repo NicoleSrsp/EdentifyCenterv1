@@ -26,7 +26,10 @@ class _NursesScreenState extends State<NursesScreen> {
 
     if (name.isEmpty || pin.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter both name and PIN')),
+        const SnackBar(
+          content: Text('Please enter both name and PIN'),
+          backgroundColor: Colors.redAccent,
+        ),
       );
       return;
     }
@@ -45,18 +48,29 @@ class _NursesScreenState extends State<NursesScreen> {
       _nameController.clear();
       _pinController.clear();
 
+      // ✅ Success snackbar with teal background
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Nurse added successfully')),
+        SnackBar(
+          content: const Text('✅ Nurse added successfully'),
+          backgroundColor: Colors.teal.shade700,
+          duration: const Duration(seconds: 2),
+        ),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error adding nurse: $e')),
+        SnackBar(
+          content: Text('Error adding nurse: $e'),
+          backgroundColor: Colors.redAccent,
+        ),
       );
     }
   }
 
   Future<void> _confirmAndDeleteNurse(
-      String nurseId, String nurseName, String storedPin) async {
+    String nurseId,
+    String nurseName,
+    String storedPin,
+  ) async {
     final pinController = TextEditingController();
 
     // Step 1: Confirmation dialog
@@ -66,7 +80,8 @@ class _NursesScreenState extends State<NursesScreen> {
         return AlertDialog(
           title: const Text('Confirm Deletion'),
           content: Text(
-              'Are you sure you want to delete Nurse "$nurseName"? This action cannot be undone.'),
+            'Are you sure you want to delete Nurse "$nurseName"? This action cannot be undone.',
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
@@ -108,8 +123,7 @@ class _NursesScreenState extends State<NursesScreen> {
               child: const Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: () =>
-                  Navigator.pop(context, pinController.text.trim()),
+              onPressed: () => Navigator.pop(context, pinController.text.trim()),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF045347),
                 foregroundColor: Colors.white,
@@ -126,7 +140,10 @@ class _NursesScreenState extends State<NursesScreen> {
     // Step 3: Check if entered PIN matches stored PIN
     if (enteredPin != storedPin) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Incorrect PIN. Deletion cancelled.')),
+        const SnackBar(
+          content: Text('Incorrect PIN. Deletion cancelled.'),
+          backgroundColor: Colors.redAccent,
+        ),
       );
       return;
     }
@@ -140,12 +157,20 @@ class _NursesScreenState extends State<NursesScreen> {
           .doc(nurseId)
           .delete();
 
+      // ✅ Success snackbar with teal background
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Nurse "$nurseName" deleted successfully.')),
+        SnackBar(
+          content: Text('✅ Nurse "$nurseName" deleted successfully.'),
+          backgroundColor: Colors.teal.shade700,
+          duration: const Duration(seconds: 2),
+        ),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error deleting nurse: $e')),
+        SnackBar(
+          content: Text('Error deleting nurse: $e'),
+          backgroundColor: Colors.redAccent,
+        ),
       );
     }
   }
@@ -168,8 +193,10 @@ class _NursesScreenState extends State<NursesScreen> {
                 // ✅ HEADER BAR
                 Container(
                   color: const Color(0xFF045347),
-                  padding:
-                      const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 16,
+                    horizontal: 24,
+                  ),
                   child: Row(
                     children: [
                       Text(
@@ -194,8 +221,10 @@ class _NursesScreenState extends State<NursesScreen> {
                 // ✅ MAIN CONTENT
                 Expanded(
                   child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 32,
+                      vertical: 24,
+                    ),
                     child: SingleChildScrollView(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -231,8 +260,10 @@ class _NursesScreenState extends State<NursesScreen> {
                                 children: [
                                   const Row(
                                     children: [
-                                      Icon(Icons.person_add_alt_1,
-                                          color: Color(0xFF045347)),
+                                      Icon(
+                                        Icons.person_add_alt_1,
+                                        color: Color(0xFF045347),
+                                      ),
                                       SizedBox(width: 8),
                                       Text(
                                         'Add New Nurse',
@@ -286,7 +317,9 @@ class _NursesScreenState extends State<NursesScreen> {
                                               const Color(0xFF047C70),
                                           foregroundColor: Colors.white,
                                           padding: const EdgeInsets.symmetric(
-                                              horizontal: 24, vertical: 16),
+                                            horizontal: 24,
+                                            vertical: 16,
+                                          ),
                                           shape: RoundedRectangleBorder(
                                             borderRadius:
                                                 BorderRadius.circular(12),
@@ -304,8 +337,10 @@ class _NursesScreenState extends State<NursesScreen> {
                           // ✅ EXISTING NURSES SECTION
                           const Row(
                             children: [
-                              Icon(Icons.medical_services_outlined,
-                                  color: Color(0xFF045347)),
+                              Icon(
+                                Icons.medical_services_outlined,
+                                color: Color(0xFF045347),
+                              ),
                               SizedBox(width: 8),
                               Text(
                                 'Existing Nurses',
@@ -383,14 +418,17 @@ class _NursesScreenState extends State<NursesScreen> {
                                     child: ListTile(
                                       contentPadding:
                                           const EdgeInsets.symmetric(
-                                              horizontal: 20, vertical: 10),
+                                        horizontal: 20,
+                                        vertical: 10,
+                                      ),
                                       leading: CircleAvatar(
                                         radius: 24,
-                                        backgroundColor:
-                                            const Color(0xFF045347)
-                                                .withOpacity(0.1),
-                                        child: const Icon(Icons.person,
-                                            color: Color(0xFF045347)),
+                                        backgroundColor: const Color(0xFF045347)
+                                            .withOpacity(0.1),
+                                        child: const Icon(
+                                          Icons.person,
+                                          color: Color(0xFF045347),
+                                        ),
                                       ),
                                       title: Text(
                                         name,
@@ -406,9 +444,12 @@ class _NursesScreenState extends State<NursesScreen> {
                                         ),
                                       ),
                                       trailing: IconButton(
-                                        icon: const Icon(Icons.delete_outline,
-                                            color: Colors.redAccent),
-                                        onPressed: () => _confirmAndDeleteNurse(
+                                        icon: const Icon(
+                                          Icons.delete_outline,
+                                          color: Colors.redAccent,
+                                        ),
+                                        onPressed: () =>
+                                            _confirmAndDeleteNurse(
                                           nurse.id,
                                           name,
                                           pin,

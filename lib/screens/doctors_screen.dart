@@ -26,10 +26,11 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
   // --- Doctor list UI ---
   Widget _buildDoctorsList() {
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('doctor_inCharge')
-          .where('centerId', isEqualTo: widget.centerId)
-          .snapshots(),
+      stream:
+          FirebaseFirestore.instance
+              .collection('doctor_inCharge')
+              .where('centerId', isEqualTo: widget.centerId)
+              .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return const Center(child: Text('Error loading doctors.'));
@@ -74,25 +75,32 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => DoctorDetailScreen(
-                          doctorId: doctor.id,
-                          doctorName: doctorName,
-                          centerId: widget.centerId,
-                          centerName: widget.centerName,
-                        ),
+                        builder:
+                            (context) => DoctorDetailScreen(
+                              doctorId: doctor.id,
+                              doctorName: doctorName,
+                              centerId: widget.centerId,
+                              centerName: widget.centerName,
+                            ),
                       ),
                     );
                   },
                   child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const CircleAvatar(
                           radius: 25,
                           backgroundColor: primaryColor,
-                          child: Icon(Icons.person, color: Colors.white, size: 28),
+                          child: Icon(
+                            Icons.person,
+                            color: Colors.white,
+                            size: 28,
+                          ),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
@@ -125,8 +133,11 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                             ],
                           ),
                         ),
-                        const Icon(Icons.chevron_right,
-                            color: Colors.grey, size: 26),
+                        const Icon(
+                          Icons.chevron_right,
+                          color: Colors.grey,
+                          size: 26,
+                        ),
                       ],
                     ),
                   ),
@@ -151,8 +162,9 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: Row(
             children: const [
               Icon(Icons.person_add_alt_1, color: primaryColor),
@@ -165,20 +177,28 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
               children: [
                 _buildTextField(firstNameController, "First Name"),
                 _buildTextField(lastNameController, "Last Name"),
-                _buildTextField(emailController, "Email",
-                    keyboardType: TextInputType.emailAddress),
-                _buildTextField(passwordController, "Password",
-                    obscureText: true),
-                _buildTextField(confirmPasswordController, "Confirm Password",
-                    obscureText: true),
+                _buildTextField(
+                  emailController,
+                  "Email",
+                  keyboardType: TextInputType.emailAddress,
+                ),
+                _buildTextField(
+                  passwordController,
+                  "Password",
+                  obscureText: true,
+                ),
+                _buildTextField(
+                  confirmPasswordController,
+                  "Confirm Password",
+                  obscureText: true,
+                ),
               ],
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child:
-                  const Text("Cancel", style: TextStyle(color: Colors.grey)),
+              child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
             ),
             ElevatedButton.icon(
               onPressed: () async {
@@ -205,7 +225,9 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                   // Step 1: Create user in Firebase Auth
                   UserCredential userCredential = await FirebaseAuth.instance
                       .createUserWithEmailAndPassword(
-                          email: email, password: password);
+                        email: email,
+                        password: password,
+                      );
 
                   String doctorId = userCredential.user!.uid;
 
@@ -214,13 +236,13 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                       .collection("doctor_inCharge")
                       .doc(doctorId)
                       .set({
-                    "name": "$firstName $lastName",
-                    "firstName": firstName,
-                    "lastName": lastName,
-                    "email": email,
-                    "centerId": widget.centerId,
-                    "createdAt": FieldValue.serverTimestamp(),
-                  });
+                        "name": "$firstName $lastName",
+                        "firstName": firstName,
+                        "lastName": lastName,
+                        "email": email,
+                        "centerId": widget.centerId,
+                        "createdAt": FieldValue.serverTimestamp(),
+                      });
 
                   // Step 3: Also save to doctors_centers
                   await FirebaseFirestore.instance
@@ -229,12 +251,12 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                       .collection("doctors_center_collection")
                       .doc(doctorId)
                       .set({
-                    "doctorId": doctorId,
-                    "name": "$firstName $lastName",
-                    "email": email,
-                    "centerId": widget.centerId,
-                    "createdAt": FieldValue.serverTimestamp(),
-                  });
+                        "doctorId": doctorId,
+                        "name": "$firstName $lastName",
+                        "email": email,
+                        "centerId": widget.centerId,
+                        "createdAt": FieldValue.serverTimestamp(),
+                      });
 
                   Navigator.pop(context);
                   _showSnack("Doctor added successfully", success: true);
@@ -266,15 +288,19 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
   void _showSnack(String message, {bool success = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        backgroundColor: success ? primaryColor : Colors.redAccent,
+        backgroundColor: success ? Colors.teal.shade700 : Colors.redAccent,
         content: Text(message),
       ),
     );
   }
 
   // --- Reusable TextField Builder ---
-  Widget _buildTextField(TextEditingController controller, String label,
-      {bool obscureText = false, TextInputType? keyboardType}) {
+  Widget _buildTextField(
+    TextEditingController controller,
+    String label, {
+    bool obscureText = false,
+    TextInputType? keyboardType,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: TextField(
@@ -319,8 +345,10 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
               children: [
                 Container(
                   width: double.infinity,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 16,
+                  ),
                   color: darkerPrimaryColor,
                   child: Text(
                     widget.centerName,

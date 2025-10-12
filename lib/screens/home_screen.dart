@@ -300,6 +300,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             content: Text(
                               'Schedule removed by ${selectedNurse['name']}.',
                             ),
+                            backgroundColor: Colors.teal.shade700,
+                            duration: const Duration(seconds: 2),
                           ),
                         );
                       }
@@ -668,11 +670,11 @@ class _HomeScreenState extends State<HomeScreen> {
                               if (mounted) {
                                 Navigator.pop(context);
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
+                                  SnackBar(
                                     content: Text(
                                       '✅ Schedule added successfully!',
                                     ),
-                                    backgroundColor: Colors.green,
+                                    backgroundColor: Colors.teal.shade700,
                                     duration: Duration(seconds: 2),
                                   ),
                                 );
