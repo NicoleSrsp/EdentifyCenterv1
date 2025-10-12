@@ -714,7 +714,7 @@ class _PatientListScreenState extends State<PatientListScreen> {
                   color: Color(0xFF045347),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 24,
-                    vertical: 20,
+                    vertical: 16,
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -723,10 +723,9 @@ class _PatientListScreenState extends State<PatientListScreen> {
                       Text(
                         widget.centerName,
                         style: const TextStyle(
-                          fontSize: 22,
+                          fontSize: 28,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
-                          letterSpacing: 0.5,
                         ),
                       ),
                       Row(

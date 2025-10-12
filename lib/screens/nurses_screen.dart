@@ -87,14 +87,14 @@ class _NursesScreenState extends State<NursesScreen> {
                 Container(
                   color: const Color(0xFF045347),
                   padding:
-                      const EdgeInsets.symmetric(vertical: 18, horizontal: 28),
+                      const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
                   child: Row(
                     children: [
                       Text(
                         widget.centerName,
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 26,
+                          fontSize: 28,
                           fontWeight: FontWeight.w700,
                         ),
                         overflow: TextOverflow.ellipsis,

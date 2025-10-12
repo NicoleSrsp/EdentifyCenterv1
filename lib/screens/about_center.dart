@@ -35,11 +35,10 @@ class AboutScreen extends StatelessWidget {
                 // ✅ Header (EXACT same as home_screen.dart)
                 Container(
                   color: const Color(0xFF045347),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
                   width: double.infinity,
                   child: Row(
                     children: [
-                      const SizedBox(width: 16),
                       Text(
                         centerName,
                         style: const TextStyle(

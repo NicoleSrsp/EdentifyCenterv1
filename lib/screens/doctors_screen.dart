@@ -320,13 +320,13 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                 Container(
                   width: double.infinity,
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                   color: darkerPrimaryColor,
                   child: Text(
                     widget.centerName,
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 26,
+                      fontSize: 28,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
