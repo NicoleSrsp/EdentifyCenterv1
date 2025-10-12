@@ -47,7 +47,7 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
+                    horizontal: 24,
                     vertical: 16,
                   ),
                   color: darkerPrimaryColor,

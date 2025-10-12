@@ -61,11 +61,10 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                       // 🔹 Header
                       Container(
                         color: const Color(0xFF045347),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
                         width: double.infinity,
                         child: Row(
                           children: [
-                            const SizedBox(width: 16),
                             Text(
                               widget.centerName,
                               style: const TextStyle(
