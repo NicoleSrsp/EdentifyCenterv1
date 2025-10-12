@@ -328,7 +328,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // unchanged logic for _addPatient() — only UI styling enhanced
-  void _addPatient() {
+  void _addPatient() async {
     String? selectedPatientId;
     String? selectedPatientName;
     String frequency = '3x';
@@ -344,8 +344,9 @@ class _HomeScreenState extends State<HomeScreen> {
       builder:
           (ctx) => StatefulBuilder(
             builder: (context, setDialogState) {
+              final filteredPatients = allPatients;
               final suggestions =
-                  allPatients.where((p) {
+                  filteredPatients.where((p) {
                     final name = (p['name'] ?? '').toString().toLowerCase();
                     return name.startsWith(localSearch.toLowerCase());
                   }).toList();
@@ -403,7 +404,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             height: 140,
                             child:
                                 suggestions.isEmpty
-                                    ? const Center(child: Text('No matches'))
+                                    ? const Center(
+                                      child: Text('No matches found'),
+                                    )
                                     : Card(
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(12),
@@ -587,7 +590,56 @@ class _HomeScreenState extends State<HomeScreen> {
                     onPressed:
                         canAdd
                             ? () async {
-                              // logic unchanged
+                              // 🔍 Step 1: Check if already scheduled this week and shift
+                              // 🔍 Step 1: Check if already scheduled this week and shift
+                              // 🔍 Step 1: Check if patient already has ANY existing schedule
+                              final existing =
+                                  await FirebaseFirestore.instance
+                                      .collection('centers')
+                                      .doc(widget.centerId)
+                                      .collection('schedules')
+                                      .where(
+                                        'patientId',
+                                        isEqualTo: selectedPatientId,
+                                      )
+                                      .get();
+
+                              if (existing.docs.isNotEmpty) {
+                                setDialogState(() {
+                                  // show a warning message inside the dialog instead of a snackbar
+                                });
+                                showDialog(
+                                  context: context,
+                                  builder: (context) {
+                                    return AlertDialog(
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      title: const Text(
+                                        'Patient Already Scheduled',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.redAccent,
+                                        ),
+                                      ),
+                                      content: const Text(
+                                        '⚠️ This patient is already scheduled and cannot be scheduled again unless removed first.',
+                                        style: TextStyle(fontSize: 15),
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed:
+                                              () => Navigator.pop(context),
+                                          child: const Text('OK'),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                );
+                                return;
+                              }
+
+                              // ✅ Step 2: Add new schedule
                               final ref = await FirebaseFirestore.instance
                                   .collection('centers')
                                   .doc(widget.centerId)
@@ -613,7 +665,18 @@ class _HomeScreenState extends State<HomeScreen> {
                                 });
                               });
 
-                              if (mounted) Navigator.pop(context);
+                              if (mounted) {
+                                Navigator.pop(context);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      '✅ Schedule added successfully!',
+                                    ),
+                                    backgroundColor: Colors.green,
+                                    duration: Duration(seconds: 2),
+                                  ),
+                                );
+                              }
                             }
                             : null,
                     icon: const Icon(Icons.add),
