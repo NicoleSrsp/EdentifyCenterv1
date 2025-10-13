@@ -592,7 +592,7 @@ class _PatientListScreenState extends State<PatientListScreen> {
               }).toList();
         }
 
-        // Sorting logic
+        // Sorting logic (unchanged)
         docs.sort((a, b) {
           final dataA = a.data() as Map<String, dynamic>;
           final dataB = b.data() as Map<String, dynamic>;
@@ -626,65 +626,80 @@ class _PatientListScreenState extends State<PatientListScreen> {
         });
 
         if (docs.isEmpty) {
-          return const Center(child: Text('No patients found.'));
+          return const Center(
+            child: Text(
+              'No patients found.',
+              style: TextStyle(fontSize: 18, color: Colors.grey),
+            ),
+          );
         }
 
-        return ListView.separated(
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
           itemCount: docs.length,
-          separatorBuilder: (_, __) => const Divider(height: 1),
           itemBuilder: (context, index) {
             final patient = docs[index];
             final data = patient.data() as Map<String, dynamic>;
             final fullName = _getFullName(data);
 
-            return Card(
-              margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              color: primaryColor,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: ListTile(
-                title: Text(
-                  fullName,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeInOut,
+              margin: const EdgeInsets.only(bottom: 14),
+              child: Card(
+                color: primaryColor,
+                elevation: 3,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
                   ),
-                ),
-                trailing: PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert, color: Colors.white),
-                  onSelected: (value) async {
-                    if (value == 'archive') {
-                      await FirebaseFirestore.instance
-                          .collection('users')
-                          .doc(patient.id)
-                          .update({'status': 'archived'});
-                    }
-                  },
-                  itemBuilder:
-                      (context) => [
-                        const PopupMenuItem(
-                          value: 'archive',
-                          child: Text(
-                            'Archive',
-                            style: TextStyle(color: Colors.black),
-                          ),
-                        ),
-                      ],
-                ),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder:
-                          (context) => PatientDetailScreen(
-                            patientId: patient.id,
-                            centerId: widget.centerId,
-                            centerName: widget.centerName,
-                          ),
+                  title: Text(
+                    fullName,
+                    style: const TextStyle(
+                      fontSize: 18, // ✅ larger and clearer
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
                     ),
-                  );
-                },
+                  ),
+                  trailing: PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_vert, color: Colors.white),
+                    onSelected: (value) async {
+                      if (value == 'archive') {
+                        await FirebaseFirestore.instance
+                            .collection('users')
+                            .doc(patient.id)
+                            .update({'status': 'archived'});
+                      }
+                    },
+                    itemBuilder:
+                        (context) => [
+                          const PopupMenuItem(
+                            value: 'archive',
+                            child: Text(
+                              'Archive',
+                              style: TextStyle(color: Colors.black),
+                            ),
+                          ),
+                        ],
+                  ),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder:
+                            (context) => PatientDetailScreen(
+                              patientId: patient.id,
+                              centerId: widget.centerId,
+                              centerName: widget.centerName,
+                            ),
+                      ),
+                    );
+                  },
+                ),
               ),
             );
           },
@@ -709,21 +724,19 @@ class _PatientListScreenState extends State<PatientListScreen> {
             child: Column(
               children: [
                 /// Header Bar
-                /// Header Bar (Simplified — Center Name Only)
                 Container(
-                  color: Color(0xFF045347),
+                  color: darkerPrimaryColor,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 24,
                     vertical: 16,
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Text(
                         widget.centerName,
                         style: const TextStyle(
-                          fontSize: 28,
+                          fontSize: 28, // ✅ consistent header font
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
@@ -742,7 +755,10 @@ class _PatientListScreenState extends State<PatientListScreen> {
                           ElevatedButton.icon(
                             onPressed: _showAddPatientDialog,
                             icon: const Icon(Icons.person_add),
-                            label: const Text('Add Patient'),
+                            label: const Text(
+                              'Add Patient',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.white,
                               foregroundColor: primaryColor,
@@ -761,11 +777,27 @@ class _PatientListScreenState extends State<PatientListScreen> {
                   ),
                 ),
 
+                /// Section Header
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(24, 20, 24, 8),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Patient List',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 28,
+                        color: primaryColor,
+                      ),
+                    ),
+                  ),
+                ),
+
                 /// Search and Sort
                 Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 24,
-                    vertical: 16,
+                    vertical: 12,
                   ),
                   child: Row(
                     children: [
@@ -773,10 +805,10 @@ class _PatientListScreenState extends State<PatientListScreen> {
                         child: TextField(
                           controller: _searchController,
                           decoration: InputDecoration(
-                            hintText: 'Search patient by name',
+                            hintText: 'Search patient by name...',
                             prefixIcon: const Icon(Icons.search),
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(10),
                             ),
                           ),
                         ),

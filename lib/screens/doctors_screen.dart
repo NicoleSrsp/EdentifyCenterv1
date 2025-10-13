@@ -24,6 +24,7 @@ class DoctorsScreen extends StatefulWidget {
 
 class _DoctorsScreenState extends State<DoctorsScreen> {
   // --- Doctor list UI ---
+  // --- Doctor list UI ---
   Widget _buildDoctorsList() {
     return StreamBuilder<QuerySnapshot>(
       stream:
@@ -45,7 +46,7 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
           return const Center(
             child: Text(
               'No doctors found.',
-              style: TextStyle(fontSize: 16, color: Colors.grey),
+              style: TextStyle(fontSize: 18, color: Colors.grey),
             ),
           );
         }
@@ -63,14 +64,14 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
             return AnimatedContainer(
               duration: const Duration(milliseconds: 250),
               curve: Curves.easeInOut,
-              margin: const EdgeInsets.only(bottom: 12),
+              margin: const EdgeInsets.only(bottom: 14),
               child: Card(
-                elevation: 2,
+                elevation: 3,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(14),
                 ),
                 child: InkWell(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(14),
                   onTap: () {
                     Navigator.push(
                       context,
@@ -87,22 +88,22 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                   },
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 14,
+                      horizontal: 20,
+                      vertical: 16,
                     ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const CircleAvatar(
-                          radius: 25,
+                          radius: 28,
                           backgroundColor: primaryColor,
                           child: Icon(
                             Icons.person,
                             color: Colors.white,
-                            size: 28,
+                            size: 30,
                           ),
                         ),
-                        const SizedBox(width: 16),
+                        const SizedBox(width: 18),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -111,23 +112,24 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                                 doctorName,
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 16,
+                                  fontSize: 18, // 🔹 larger name font
+                                  color: Colors.black87,
                                 ),
                               ),
-                              const SizedBox(height: 4),
+                              const SizedBox(height: 6),
                               Text(
                                 doctorEmail,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: Colors.grey.shade700,
+                                style: const TextStyle(
+                                  fontSize: 16, // 🔹 larger detail font
+                                  color: Colors.black87,
                                 ),
                               ),
                               const SizedBox(height: 2),
                               Text(
                                 doctorContact,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: Colors.grey.shade700,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.black87,
                                 ),
                               ),
                             ],
@@ -136,7 +138,7 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                         const Icon(
                           Icons.chevron_right,
                           color: Colors.grey,
-                          size: 26,
+                          size: 28,
                         ),
                       ],
                     ),
@@ -360,16 +362,17 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                   ),
                 ),
                 const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                   child: Text(
                     'Doctors List',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontSize: 18,
+                      fontSize: 28, // ✅ upgraded from 18
                       color: primaryColor,
                     ),
                   ),
                 ),
+
                 Expanded(child: _buildDoctorsList()),
               ],
             ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'side_menu.dart';
+import 'settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final String centerId;
@@ -18,6 +19,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  bool isDarkMode = false;
   DateTime selectedDate = DateTime.now();
   String searchQuery = '';
   List<Map<String, dynamic>> allPatients = [];
@@ -862,12 +864,16 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _tableHeader(String text) => Padding(
-    padding: const EdgeInsets.all(8),
+    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
     child: Center(
       child: Text(
         text,
         textAlign: TextAlign.center,
-        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+        style: const TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 18, // 🔹 increased from 14
+          color: Color(0xFF045347),
+        ),
       ),
     ),
   );
@@ -878,13 +884,14 @@ class _HomeScreenState extends State<HomeScreen> {
     TextAlign align = TextAlign.left,
   }) {
     return Padding(
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
       child: Text(
         text,
         textAlign: align,
         style: TextStyle(
-          fontWeight: isHeader ? FontWeight.bold : FontWeight.normal,
-          fontSize: 13,
+          fontWeight: isHeader ? FontWeight.bold : FontWeight.w500,
+          fontSize: isHeader ? 18 : 16, // 🔹 larger for both header and content
+          color: isHeader ? Colors.teal.shade800 : Colors.black87,
         ),
       ),
     );
@@ -926,9 +933,22 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const Spacer(),
                       IconButton(
-                        icon: const Icon(Icons.settings, color: Colors.white70),
-                        onPressed: () {},
-                        tooltip: 'Settings',
+                        icon: const Icon(
+                          Icons.settings,
+                          color: Colors.white, // 👈 keeps the icon white
+                        ),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (context) => SettingsScreen(
+                                    centerId: widget.centerId,
+                                    centerName: widget.centerName,
+                                  ),
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -957,10 +977,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                 child: Row(
                                   children: [
                                     Text(
-                                      monthYear,
+                                      monthYear, // 👈 Displays the formatted month + year
                                       style: const TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
+                                        fontSize: 28, // ✅ Updated
+                                        fontWeight:
+                                            FontWeight.bold, // ✅ Updated
                                       ),
                                     ),
                                     const Icon(Icons.arrow_drop_down),
