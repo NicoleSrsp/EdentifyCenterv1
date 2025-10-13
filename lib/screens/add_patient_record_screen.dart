@@ -208,7 +208,7 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
           .add({
             'title': title,
             'message': message,
-            'createdAt': Timestamp.now(), // ✅ use actual timestamp
+            'createdAt': FieldValue.serverTimestamp(),
             'read': false,
           });
 

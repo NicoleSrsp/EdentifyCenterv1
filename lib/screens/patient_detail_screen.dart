@@ -61,7 +61,10 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                       // 🔹 Header
                       Container(
                         color: const Color(0xFF045347),
-                        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 16,
+                          horizontal: 24,
+                        ),
                         width: double.infinity,
                         child: Row(
                           children: [
@@ -804,6 +807,10 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
               onPressed: () => Navigator.pop(context, null),
             ),
             ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.teal.shade700, // ✅ Button background
+                foregroundColor: Colors.white, // ✅ Text (font) color
+              ),
               child: const Text("Verify"),
               onPressed: () async {
                 if (selectedNurseId == null || pinController.text.isEmpty) {
