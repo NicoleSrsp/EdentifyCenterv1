@@ -609,34 +609,121 @@ class _HomeScreenState extends State<HomeScreen> {
                                       .get();
 
                               if (existing.docs.isNotEmpty) {
-                                setDialogState(() {
-                                  // show a warning message inside the dialog instead of a snackbar
-                                });
+                                final data = existing.docs.first.data();
+                                final Timestamp? weekTs = data['weekOf'];
+                                final DateTime? weekOf = weekTs?.toDate();
+                                final String shift = data['shift'] ?? '';
+                                final List<dynamic> daysList =
+                                    data['days'] ?? [];
+
+                                // Format the week range (Mon–Fri)
+                                String weekText = 'Unknown date';
+                                if (weekOf != null) {
+                                  final weekStart = _normalizeToMonday(weekOf);
+                                  final weekEnd = weekStart.add(
+                                    const Duration(days: 4),
+                                  );
+                                  weekText =
+                                      '${DateFormat('MMM dd, yyyy').format(weekStart)} - ${DateFormat('MMM dd, yyyy').format(weekEnd)}';
+                                }
+
+                                // Format only the weekday names (no dates)
+                                final formattedDays = daysList
+                                    .map((d) {
+                                      try {
+                                        final date = DateTime.parse(d);
+                                        return DateFormat(
+                                          'EEEE',
+                                        ).format(date); // e.g. Monday, Tuesday
+                                      } catch (_) {
+                                        return d.toString();
+                                      }
+                                    })
+                                    .join(', ');
+
                                 showDialog(
                                   context: context,
                                   builder: (context) {
-                                    return AlertDialog(
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(16),
-                                      ),
-                                      title: const Text(
-                                        'Patient Already Scheduled',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.redAccent,
+                                    final screenWidth =
+                                        MediaQuery.of(context).size.width;
+                                    return Center(
+                                      child: ConstrainedBox(
+                                        constraints: BoxConstraints(
+                                          maxWidth:
+                                              screenWidth *
+                                              0.9, // ✅ slightly wider (90% of screen)
+                                          minWidth:
+                                              380, // ✅ ensures good width even on small devices
+                                        ),
+                                        child: AlertDialog(
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              18,
+                                            ),
+                                          ),
+                                          title: const Text(
+                                            'Patient Already Scheduled',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.redAccent,
+                                              fontSize: 20,
+                                            ),
+                                          ),
+                                          content: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              const Text(
+                                                '⚠️ This patient is already scheduled.',
+                                                style: TextStyle(
+                                                  fontSize: 17,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 18),
+                                              Text(
+                                                '🗓 Week: $weekText',
+                                                style: const TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Colors.black87,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 6),
+                                              Text(
+                                                '📅 Days: $formattedDays',
+                                                style: const TextStyle(
+                                                  fontSize: 16,
+                                                  color: Colors.black87,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 6),
+                                              Text(
+                                                '⏰ Shift: $shift',
+                                                style: const TextStyle(
+                                                  fontSize: 16,
+                                                  color: Colors.black87,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed:
+                                                  () => Navigator.pop(context),
+                                              child: const Text(
+                                                'OK',
+                                                style: TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.teal,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
-                                      content: const Text(
-                                        '⚠️ This patient is already scheduled and cannot be scheduled again unless removed first.',
-                                        style: TextStyle(fontSize: 15),
-                                      ),
-                                      actions: [
-                                        TextButton(
-                                          onPressed:
-                                              () => Navigator.pop(context),
-                                          child: const Text('OK'),
-                                        ),
-                                      ],
                                     );
                                   },
                                 );
