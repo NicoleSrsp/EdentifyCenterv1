@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 import 'add_patient_record_screen.dart';
 import 'side_menu.dart';
 
@@ -532,15 +533,10 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                           ),
                           onPressed: () async {
                             if (_formKey.currentState!.validate()) {
-                              // --- NEW: Require nurse verification before applying updates ---
                               final nurseInfo =
                                   await _promptNurseVerification();
-                              if (nurseInfo == null) {
-                                // canceled or verification failed
-                                return;
-                              }
+                              if (nurseInfo == null) return;
 
-                              // continue with original update logic, but include nurse info
                               final updatedData = {
                                 'preWeight': preWeightController.text,
                                 'postWeight': postWeightController.text,
@@ -552,12 +548,11 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                                 'respiration': respirationController.text,
                                 'oxygenSaturation': o2Controller.text,
                                 'updatedAt': FieldValue.serverTimestamp(),
-                                // add nurse who made the edit
                                 'updatedBy': _verifiedNurse?['nurseName'],
                                 'nurseName': nurseInfo['nurseName'],
                               };
 
-                              // 🔹 Update record
+                              // 🔹 Update Firestore record
                               await FirebaseFirestore.instance
                                   .collection('users')
                                   .doc(patientId)
@@ -566,109 +561,55 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                                   .update(updatedData);
 
                               try {
-                                // 🔹 Determine which fields actually changed
-                                final changedFields = <String>[];
-                                updatedData.forEach((key, value) {
-                                  if (key != 'updatedAt' &&
-                                      key != 'updatedBy' &&
-                                      key != 'nurseName' &&
-                                      record[key]?.toString() !=
-                                          value.toString()) {
-                                    changedFields.add(key);
-                                  }
-                                });
+                                // 🗓️ Use the record’s actual date from Firestore
+                                final recordDateString =
+                                    record['date'] ??
+                                    recordId; // e.g. "2025-10-13"
+                                final recordDate = DateTime.parse(
+                                  recordDateString,
+                                );
+                                final formattedDate = DateFormat(
+                                  'MMM dd, yyyy',
+                                ).format(recordDate); // e.g. Oct 13, 2025
 
-                                // 🔹 Make field names readable
-                                final fieldNames = {
-                                  'preWeight': 'Pre-Weight',
-                                  'postWeight': 'Post-Weight',
-                                  'ufGoal': 'UF Goal',
-                                  'ufRemoved': 'UF Removed',
-                                  'bloodPressure': 'Blood Pressure',
-                                  'pulseRate': 'Pulse Rate',
-                                  'temperature': 'Temperature',
-                                  'respiration': 'Respiration',
-                                  'oxygenSaturation': 'Oxygen Saturation',
-                                };
+                                // 🟢 Determine if this is an update (based on whether data already exists)
+                                final bool isUpdate =
+                                    record
+                                        .isNotEmpty; // ✅ works for Map-based records
 
-                                final readableChanges =
-                                    changedFields
-                                        .map((key) => fieldNames[key] ?? key)
-                                        .toList();
+                                final nurseName =
+                                    _verifiedNurse?['nurseName'] ?? 'Nurse';
 
-                                // 🔹 Format nicely: “A, B and C”
-                                String formattedFields;
-                                if (readableChanges.isEmpty) {
-                                  formattedFields = '';
-                                } else if (readableChanges.length == 1) {
-                                  formattedFields = readableChanges.first;
-                                } else {
-                                  formattedFields =
-                                      readableChanges
-                                          .sublist(
-                                            0,
-                                            readableChanges.length - 1,
-                                          )
-                                          .join(', ') +
-                                      ' and ' +
-                                      readableChanges.last;
-                                }
+                                final title =
+                                    isUpdate
+                                        ? 'Dialysis Record Updated'
+                                        : 'New Dialysis Record Added';
 
-                                // 🔹 Compose message
                                 final message =
-                                    changedFields.isEmpty
-                                        ? 'Nurse ${_verifiedNurse?['nurseName']} saved your dialysis record today.'
-                                        : 'Nurse ${_verifiedNurse?['nurseName']} updated your $formattedFields today.';
+                                    isUpdate
+                                        ? '$nurseName updated your dialysis record for $formattedDate.'
+                                        : '$nurseName added your dialysis record for $formattedDate.';
 
-                                // 🔹 Send patient notification
+                                // 🟢 Send notification to patient
                                 await FirebaseFirestore.instance
                                     .collection('users')
-                                    .doc(patientId)
+                                    .doc(widget.patientId.trim())
                                     .collection('notifications')
                                     .add({
-                                      'title':
-                                          changedFields.isEmpty
-                                              ? 'Dialysis Record Saved'
-                                              : 'Dialysis Record Updated',
+                                      'title': title,
                                       'message': message,
                                       'createdAt': FieldValue.serverTimestamp(),
                                       'read': false,
+                                      'type': 'treatment_record',
+                                      'recordDate':
+                                          recordId, // ✅ match Firestore doc ID
                                     });
 
-                                // 🔹 Notify assigned doctor (if any)
-                                final patientDoc =
-                                    await FirebaseFirestore.instance
-                                        .collection('users')
-                                        .doc(patientId)
-                                        .get();
-
-                                if (patientDoc.exists &&
-                                    patientDoc.data()!.containsKey(
-                                      'doctorId',
-                                    )) {
-                                  final doctorId = patientDoc['doctorId'];
-                                  if (doctorId != null &&
-                                      doctorId.toString().isNotEmpty) {
-                                    await FirebaseFirestore.instance
-                                        .collection('users')
-                                        .doc(doctorId)
-                                        .collection('notifications')
-                                        .add({
-                                          'title': 'Dialysis Record Updated',
-                                          'message':
-                                              'Nurse ${_verifiedNurse?['nurseName']} updated $formattedFields for ${patientDoc['firstName']} ${patientDoc['lastName']}.',
-                                          'patientId': patientId,
-                                          'createdAt':
-                                              FieldValue.serverTimestamp(),
-                                          'read': false,
-                                          'changedFields': changedFields,
-                                        });
-                                  }
-                                }
-                              } catch (e) {
                                 debugPrint(
-                                  '⚠️ Error sending notifications: $e',
+                                  "✅ Notification sent for $formattedDate",
                                 );
+                              } catch (e) {
+                                debugPrint("⚠️ Error sending notification: $e");
                               }
 
                               Navigator.pop(context);

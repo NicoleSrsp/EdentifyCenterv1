@@ -135,7 +135,7 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
   }
 
   Future<void> _saveRecord() async {
-    // 🧩 Require nurse verification first     
+    // 🧩 Require nurse verification first
     if (_verifiedNurse == null) {
       final nurseInfo = await _showNurseVerificationDialog();
       if (nurseInfo == null) return; // cancelled
@@ -186,7 +186,7 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
 
     await recordRef.set(record, SetOptions(merge: true));
 
-    // 🟢 Patient notification
+    // 🟢 Patient notification (now includes type + recordDate)
     try {
       String title;
       String message;
@@ -194,22 +194,28 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
       if (!isUpdate) {
         title = "New Dialysis Record Added";
         message =
-            "Nurse ${_verifiedNurse?['nurseName'] ?? ''} added your dialysis record today.";
+            "Nurse ${_verifiedNurse?['nurseName'] ?? ''} added your dialysis record for ${DateFormat('MMM dd, yyyy').format(_selectedDate)}.";
       } else {
         title = "Dialysis Record Updated";
         message =
-            "Nurse ${_verifiedNurse?['nurseName'] ?? ''} updated your dialysis record today.";
+            "Nurse ${_verifiedNurse?['nurseName'] ?? ''} updated your dialysis record for ${DateFormat('MMM dd, yyyy').format(_selectedDate)}.";
       }
 
       await FirebaseFirestore.instance
           .collection('users')
-          .doc(widget.patientId.trim()) // ✅ ensure no spaces
+          .doc(widget.patientId.trim())
           .collection('notifications')
           .add({
             'title': title,
             'message': message,
             'createdAt': FieldValue.serverTimestamp(),
             'read': false,
+            'type': 'treatment_record', // 🧩 Added field for navigation
+            'recordDate':
+                _selectedDate
+                    .toIso8601String()
+                    .split('T')
+                    .first, // 🧩 yyyy-MM-dd
           });
 
       debugPrint("✅ Notification added for user ${widget.patientId}");
