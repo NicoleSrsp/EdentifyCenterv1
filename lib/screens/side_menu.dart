@@ -136,7 +136,7 @@
             ),
             _buildMenuItem(
               context: context,
-              icon: Icons.person_outline,
+              icon: Icons.medical_services,
               title: 'Doctors',
               selected: selectedMenu == 'Doctors',
               routeName: '/doctors',
