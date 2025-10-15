@@ -136,7 +136,7 @@
             ),
             _buildMenuItem(
               context: context,
-              icon: Icons.settings,
+              icon: Icons.person_outline,
               title: 'Doctors',
               selected: selectedMenu == 'Doctors',
               routeName: '/doctors',
@@ -144,7 +144,7 @@
             // 🧑‍⚕️ NEW NURSES SECTION
             _buildMenuItem(
               context: context,
-              icon: Icons.medical_services,
+              icon: Icons.vaccines,
               title: 'Nurses',
               selected: selectedMenu == 'Nurses',
               routeName: '/nurses',
