@@ -597,6 +597,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               // 🔍 Step 1: Check if already scheduled this week and shift
                               // 🔍 Step 1: Check if already scheduled this week and shift
                               // 🔍 Step 1: Check if patient already has ANY existing schedule
+                              // ✅ Step 1: Check if patient already has an *unfinished* schedule
                               final existing =
                                   await FirebaseFirestore.instance
                                       .collection('centers')
@@ -608,13 +609,40 @@ class _HomeScreenState extends State<HomeScreen> {
                                       )
                                       .get();
 
-                              if (existing.docs.isNotEmpty) {
-                                final data = existing.docs.first.data();
-                                final Timestamp? weekTs = data['weekOf'];
+                              bool hasActiveSchedule = false;
+                              Map<String, dynamic>? activeScheduleData;
+
+                              for (var doc in existing.docs) {
+                                final data = doc.data();
+                                final Map<String, dynamic>? doneByDay =
+                                    (data['isDoneByDay']
+                                        as Map<String, dynamic>?) ??
+                                    {};
+                                final List<dynamic> scheduledDays =
+                                    (data['days'] ?? []);
+
+                                // Check if at least one day is not yet done
+                                final stillOngoing = scheduledDays.any(
+                                  (d) => doneByDay?[d.toString()] != true,
+                                );
+
+                                if (stillOngoing) {
+                                  hasActiveSchedule = true;
+                                  activeScheduleData = data;
+                                  break;
+                                }
+                              }
+
+                              if (hasActiveSchedule &&
+                                  activeScheduleData != null) {
+                                // Extract readable info for dialog
+                                final Timestamp? weekTs =
+                                    activeScheduleData['weekOf'];
                                 final DateTime? weekOf = weekTs?.toDate();
-                                final String shift = data['shift'] ?? '';
+                                final String shift =
+                                    activeScheduleData['shift'] ?? '';
                                 final List<dynamic> daysList =
-                                    data['days'] ?? [];
+                                    activeScheduleData['days'] ?? [];
 
                                 // Format the week range (Mon–Fri)
                                 String weekText = 'Unknown date';
@@ -627,20 +655,19 @@ class _HomeScreenState extends State<HomeScreen> {
                                       '${DateFormat('MMM dd, yyyy').format(weekStart)} - ${DateFormat('MMM dd, yyyy').format(weekEnd)}';
                                 }
 
-                                // Format only the weekday names (no dates)
+                                // Format weekday names
                                 final formattedDays = daysList
                                     .map((d) {
                                       try {
                                         final date = DateTime.parse(d);
-                                        return DateFormat(
-                                          'EEEE',
-                                        ).format(date); // e.g. Monday, Tuesday
+                                        return DateFormat('EEEE').format(date);
                                       } catch (_) {
                                         return d.toString();
                                       }
                                     })
                                     .join(', ');
 
+                                // ❌ Show alert if there’s an ongoing (not fully done) schedule
                                 showDialog(
                                   context: context,
                                   builder: (context) {
@@ -649,11 +676,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                     return Center(
                                       child: ConstrainedBox(
                                         constraints: BoxConstraints(
-                                          maxWidth:
-                                              screenWidth *
-                                              0.9, // ✅ slightly wider (90% of screen)
-                                          minWidth:
-                                              380, // ✅ ensures good width even on small devices
+                                          maxWidth: screenWidth * 0.9,
+                                          minWidth: 380,
                                         ),
                                         child: AlertDialog(
                                           shape: RoundedRectangleBorder(
@@ -662,7 +686,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                             ),
                                           ),
                                           title: const Text(
-                                            'Patient Already Scheduled',
+                                            'Cannot Add Schedule',
                                             style: TextStyle(
                                               fontWeight: FontWeight.bold,
                                               color: Colors.redAccent,
@@ -675,18 +699,15 @@ class _HomeScreenState extends State<HomeScreen> {
                                                 CrossAxisAlignment.start,
                                             children: [
                                               const Text(
-                                                '⚠️ This patient is already scheduled.',
-                                                style: TextStyle(
-                                                  fontSize: 17,
-                                                  fontWeight: FontWeight.w500,
-                                                ),
+                                                '⚠️ This patient still has an ongoing dialysis schedule.\n\nPlease mark all days as done before adding a new one.',
+                                                style: TextStyle(fontSize: 16),
                                               ),
-                                              const SizedBox(height: 18),
+                                              const SizedBox(height: 16),
                                               Text(
                                                 '🗓 Week: $weekText',
                                                 style: const TextStyle(
-                                                  fontSize: 16,
                                                   fontWeight: FontWeight.w600,
+                                                  fontSize: 16,
                                                   color: Colors.black87,
                                                 ),
                                               ),
@@ -807,7 +828,7 @@ class _HomeScreenState extends State<HomeScreen> {
           (i) => start.add(Duration(days: i)),
         );
 
-        Map<String, Map<String, List<Map<String, String>>>> table = {
+        Map<String, Map<String, List<Map<String, dynamic>>>> table = {
           for (var s in shifts)
             s: {for (var d in weekDays) DateFormat('yyyy-MM-dd').format(d): []},
         };
@@ -821,6 +842,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 (data['days'] as List<dynamic>? ?? [])
                     .map((e) => e.toString())
                     .toList();
+            final isDoneByDay = Map<String, dynamic>.from(
+              data['isDoneByDay'] ?? {},
+            );
 
             if (searchQuery.isNotEmpty &&
                 !name.toLowerCase().contains(searchQuery.toLowerCase())) {
@@ -830,7 +854,11 @@ class _HomeScreenState extends State<HomeScreen> {
             if (table.containsKey(pShift)) {
               for (var d in pDays) {
                 if (table[pShift]?[d] != null) {
-                  table[pShift]?[d]?.add({'id': doc.id, 'name': name});
+                  table[pShift]?[d]?.add({
+                    'id': doc.id,
+                    'name': name,
+                    'isDoneByDay': isDoneByDay,
+                  });
                 }
               }
             }
@@ -896,39 +924,109 @@ class _HomeScreenState extends State<HomeScreen> {
                                 return _tableCell('-');
                               }
 
-                              // 📍Display each patient with a delete button
                               return Padding(
                                 padding: const EdgeInsets.all(8),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children:
                                       patients.map((p) {
+                                        final isDoneByDay =
+                                            Map<String, dynamic>.from(
+                                              p['isDoneByDay'] ?? {},
+                                            );
+                                        final isDone = isDoneByDay[key] == true;
+
                                         return Row(
                                           mainAxisAlignment:
                                               MainAxisAlignment.spaceBetween,
                                           children: [
                                             Expanded(
-                                              child: Text(
-                                                p['name'] ?? '',
-                                                style: const TextStyle(
-                                                  fontSize: 13,
+                                              child: GestureDetector(
+                                                onTap: () async {
+                                                  // ✅ Toggle done for this specific day
+                                                  final docRef =
+                                                      FirebaseFirestore.instance
+                                                          .collection('centers')
+                                                          .doc(widget.centerId)
+                                                          .collection(
+                                                            'schedules',
+                                                          )
+                                                          .doc(p['id']);
+
+                                                  await docRef.update({
+                                                    'isDoneByDay.$key': !isDone,
+                                                  });
+                                                },
+                                                child: Text(
+                                                  p['name'] ?? '',
+                                                  style: TextStyle(
+                                                    fontSize: 13,
+                                                    decoration:
+                                                        isDone
+                                                            ? TextDecoration
+                                                                .lineThrough
+                                                            : null,
+                                                    color:
+                                                        isDone
+                                                            ? Colors.grey
+                                                            : Colors.black,
+                                                  ),
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
                                                 ),
-                                                overflow: TextOverflow.ellipsis,
                                               ),
                                             ),
-                                            IconButton(
-                                              icon: const Icon(
-                                                Icons.delete,
-                                                size: 18,
-                                                color: Colors.red,
-                                              ),
-                                              tooltip: 'Remove from schedule',
-                                              onPressed: () async {
-                                                await _confirmAndDeleteSchedule(
-                                                  p['id']!,
-                                                  p['name'] ?? '',
-                                                );
-                                              },
+                                            Row(
+                                              children: [
+                                                IconButton(
+                                                  icon: Icon(
+                                                    isDone
+                                                        ? Icons.check_box
+                                                        : Icons
+                                                            .check_box_outline_blank,
+                                                    color: Colors.teal,
+                                                    size: 18,
+                                                  ),
+                                                  tooltip:
+                                                      isDone
+                                                          ? 'Mark as not done'
+                                                          : 'Mark as done',
+                                                  onPressed: () async {
+                                                    final docRef =
+                                                        FirebaseFirestore
+                                                            .instance
+                                                            .collection(
+                                                              'centers',
+                                                            )
+                                                            .doc(
+                                                              widget.centerId,
+                                                            )
+                                                            .collection(
+                                                              'schedules',
+                                                            )
+                                                            .doc(p['id']);
+                                                    await docRef.update({
+                                                      'isDoneByDay.$key':
+                                                          !isDone,
+                                                    });
+                                                  },
+                                                ),
+                                                IconButton(
+                                                  icon: const Icon(
+                                                    Icons.delete,
+                                                    size: 18,
+                                                    color: Colors.red,
+                                                  ),
+                                                  tooltip:
+                                                      'Remove from schedule',
+                                                  onPressed: () async {
+                                                    await _confirmAndDeleteSchedule(
+                                                      p['id']!,
+                                                      p['name'] ?? '',
+                                                    );
+                                                  },
+                                                ),
+                                              ],
                                             ),
                                           ],
                                         );
