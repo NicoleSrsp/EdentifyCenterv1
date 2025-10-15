@@ -1,3 +1,5 @@
+import 'package:edentifyweb/screens/add_patient_record_screen.dart';
+import 'package:edentifyweb/screens/patient_detail_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -887,7 +889,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   scrollDirection: Axis.horizontal,
                   child: Table(
                     border: TableBorder.all(color: Colors.grey.shade300),
-                    defaultColumnWidth: const FixedColumnWidth(160),
+                    defaultColumnWidth: const FixedColumnWidth(220),
                     children: [
                       TableRow(
                         decoration: BoxDecoration(
@@ -943,20 +945,219 @@ class _HomeScreenState extends State<HomeScreen> {
                                             Expanded(
                                               child: GestureDetector(
                                                 onTap: () async {
-                                                  // ✅ Toggle done for this specific day
-                                                  final docRef =
-                                                      FirebaseFirestore.instance
-                                                          .collection('centers')
-                                                          .doc(widget.centerId)
-                                                          .collection(
-                                                            'schedules',
-                                                          )
-                                                          .doc(p['id']);
+                                                  try {
+                                                    final now = DateTime.now();
+                                                    final todayKey = DateFormat(
+                                                      'yyyy-MM-dd',
+                                                    ).format(
+                                                      DateTime(
+                                                        now.year,
+                                                        now.month,
+                                                        now.day,
+                                                      ),
+                                                    );
 
-                                                  await docRef.update({
-                                                    'isDoneByDay.$key': !isDone,
-                                                  });
+                                                    // 🧩 Get patient data from the schedule document
+                                                    final schedulePatientId =
+                                                        p['id'] ?? '';
+                                                    final schedulePatientName =
+                                                        p['name'] ?? '';
+
+                                                    print(
+                                                      "🧠 Patient map contents: $p",
+                                                    );
+                                                    print(
+                                                      "👤 Tapped patient: $schedulePatientName",
+                                                    );
+                                                    print(
+                                                      "📄 Schedule patientId: $schedulePatientId",
+                                                    );
+
+                                                    if (schedulePatientName
+                                                        .isEmpty) {
+                                                      ScaffoldMessenger.of(
+                                                        context,
+                                                      ).showSnackBar(
+                                                        const SnackBar(
+                                                          content: Text(
+                                                            'Missing patient name.',
+                                                          ),
+                                                        ),
+                                                      );
+                                                      return;
+                                                    }
+
+                                                    // 🧩 Split "Reyes, Mika" into lastName = Reyes, firstName = Mika
+                                                    final nameParts =
+                                                        schedulePatientName
+                                                            .split(',');
+                                                    final lastName =
+                                                        nameParts.first.trim();
+                                                    final firstName =
+                                                        nameParts.length > 1
+                                                            ? nameParts[1]
+                                                                .trim()
+                                                            : '';
+
+                                                    // 🔎 Try to find the real userId from "users" collection
+                                                    final userQuery =
+                                                        await FirebaseFirestore
+                                                            .instance
+                                                            .collection('users')
+                                                            .where(
+                                                              'firstName',
+                                                              isEqualTo:
+                                                                  firstName,
+                                                            )
+                                                            .where(
+                                                              'lastName',
+                                                              isEqualTo:
+                                                                  lastName,
+                                                            )
+                                                            .limit(1)
+                                                            .get();
+
+                                                    String realUserId;
+                                                    if (userQuery
+                                                        .docs
+                                                        .isNotEmpty) {
+                                                      realUserId =
+                                                          userQuery
+                                                              .docs
+                                                              .first
+                                                              .id;
+                                                      print(
+                                                        "✅ Found matching userId: $realUserId",
+                                                      );
+                                                    } else {
+                                                      realUserId =
+                                                          schedulePatientId; // fallback if not found
+                                                      print(
+                                                        "⚠️ No user found by name, using schedule ID: $realUserId",
+                                                      );
+                                                    }
+
+                                                    print(
+                                                      "🔗 Real userId used: $realUserId",
+                                                    );
+
+                                                    // 🔍 Check if today's record exists
+                                                    final recordRef =
+                                                        FirebaseFirestore
+                                                            .instance
+                                                            .collection('users')
+                                                            .doc(realUserId)
+                                                            .collection(
+                                                              'records',
+                                                            )
+                                                            .doc(todayKey);
+
+                                                    final recordSnap =
+                                                        await recordRef.get();
+                                                    final hasTodayRecord =
+                                                        recordSnap.exists;
+
+                                                    print(
+                                                      "🧾 Record exists? $hasTodayRecord",
+                                                    );
+                                                    print(
+                                                      "🧾 Record data: ${recordSnap.data()}",
+                                                    );
+
+                                                    if (!context.mounted)
+                                                      return;
+
+                                                    // 🧭 Ask what to do next
+                                                    showDialog(
+                                                      context: context,
+                                                      builder:
+                                                          (ctx) => AlertDialog(
+                                                            shape: RoundedRectangleBorder(
+                                                              borderRadius:
+                                                                  BorderRadius.circular(
+                                                                    16,
+                                                                  ),
+                                                            ),
+                                                            title: const Text(
+                                                              'Dialysis Record Action',
+                                                              style: TextStyle(
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                              ),
+                                                            ),
+                                                            content: Text(
+                                                              hasTodayRecord
+                                                                  ? 'A dialysis record for today already exists. Would you like to edit it instead?'
+                                                                  : 'No dialysis record found for today. Would you like to add one now?',
+                                                            ),
+                                                            actions: [
+                                                              TextButton(
+                                                                onPressed:
+                                                                    () =>
+                                                                        Navigator.pop(
+                                                                          ctx,
+                                                                        ),
+                                                                child:
+                                                                    const Text(
+                                                                      'Cancel',
+                                                                    ),
+                                                              ),
+                                                              FilledButton(
+                                                                onPressed: () {
+                                                                  Navigator.pop(
+                                                                    ctx,
+                                                                  );
+                                                                  Navigator.push(
+                                                                    context,
+                                                                    MaterialPageRoute(
+                                                                      builder:
+                                                                          (_) =>
+                                                                              hasTodayRecord
+                                                                                  ? PatientDetailScreen(
+                                                                                    patientId:
+                                                                                        realUserId,
+                                                                                    centerId:
+                                                                                        widget.centerId,
+                                                                                    centerName:
+                                                                                        widget.centerName,
+                                                                                  )
+                                                                                  : AddPatientRecordScreen(
+                                                                                    patientId:
+                                                                                        realUserId,
+                                                                                    centerId:
+                                                                                        widget.centerId,
+                                                                                    centerName:
+                                                                                        widget.centerName,
+                                                                                  ),
+                                                                    ),
+                                                                  );
+                                                                },
+                                                                child: Text(
+                                                                  hasTodayRecord
+                                                                      ? "Edit Today's Record"
+                                                                      : "Add New Record",
+                                                                ),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                    );
+                                                  } catch (e) {
+                                                    print(
+                                                      "⚠️ Error checking record: $e",
+                                                    );
+                                                    ScaffoldMessenger.of(
+                                                      context,
+                                                    ).showSnackBar(
+                                                      SnackBar(
+                                                        content: Text(
+                                                          'Error checking record: $e',
+                                                        ),
+                                                      ),
+                                                    );
+                                                  }
                                                 },
+
                                                 child: Text(
                                                   p['name'] ?? '',
                                                   style: TextStyle(
@@ -969,13 +1170,17 @@ class _HomeScreenState extends State<HomeScreen> {
                                                     color:
                                                         isDone
                                                             ? Colors.grey
-                                                            : Colors.black,
+                                                            : Colors
+                                                                .teal
+                                                                .shade900,
+                                                    fontWeight: FontWeight.w500,
                                                   ),
                                                   overflow:
                                                       TextOverflow.ellipsis,
                                                 ),
                                               ),
                                             ),
+
                                             Row(
                                               children: [
                                                 IconButton(
