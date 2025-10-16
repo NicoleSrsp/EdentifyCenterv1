@@ -19,6 +19,8 @@ class NursesScreen extends StatefulWidget {
 class _NursesScreenState extends State<NursesScreen> {
   final _nameController = TextEditingController();
   final _pinController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
+  String searchQuery = "";
 
   Future<void> _addNurse() async {
     final name = _nameController.text.trim();
@@ -48,7 +50,6 @@ class _NursesScreenState extends State<NursesScreen> {
       _nameController.clear();
       _pinController.clear();
 
-      // ✅ Success snackbar with teal background
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('✅ Nurse added successfully'),
@@ -73,7 +74,6 @@ class _NursesScreenState extends State<NursesScreen> {
   ) async {
     final pinController = TextEditingController();
 
-    // Step 1: Confirmation dialog
     final confirmDelete = await showDialog<bool>(
       context: context,
       builder: (context) {
@@ -100,9 +100,8 @@ class _NursesScreenState extends State<NursesScreen> {
       },
     );
 
-    if (confirmDelete != true) return; // cancelled
+    if (confirmDelete != true) return;
 
-    // Step 2: PIN verification dialog
     final enteredPin = await showDialog<String>(
       context: context,
       builder: (context) {
@@ -137,7 +136,6 @@ class _NursesScreenState extends State<NursesScreen> {
 
     if (enteredPin == null || enteredPin.isEmpty) return;
 
-    // Step 3: Check if entered PIN matches stored PIN
     if (enteredPin != storedPin) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -148,7 +146,6 @@ class _NursesScreenState extends State<NursesScreen> {
       return;
     }
 
-    // Step 4: Proceed with deletion
     try {
       await FirebaseFirestore.instance
           .collection('centers')
@@ -157,7 +154,6 @@ class _NursesScreenState extends State<NursesScreen> {
           .doc(nurseId)
           .delete();
 
-      // ✅ Success snackbar with teal background
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('✅ Nurse "$nurseName" deleted successfully.'),
@@ -334,6 +330,27 @@ class _NursesScreenState extends State<NursesScreen> {
                           ),
                           const SizedBox(height: 32),
 
+                          // ✅ SEARCH BAR
+                          TextField(
+                            controller: _searchController,
+                            decoration: InputDecoration(
+                              hintText: "Search nurse by name...",
+                              prefixIcon: const Icon(Icons.search),
+                              filled: true,
+                              fillColor: Colors.grey[100],
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: BorderSide.none,
+                              ),
+                            ),
+                            onChanged: (value) {
+                              setState(() {
+                                searchQuery = value.toLowerCase();
+                              });
+                            },
+                          ),
+                          const SizedBox(height: 20),
+
                           // ✅ EXISTING NURSES SECTION
                           const Row(
                             children: [
@@ -390,16 +407,30 @@ class _NursesScreenState extends State<NursesScreen> {
                                 );
                               }
 
-                              final nurses = snapshot.data!.docs;
+                              // 🔍 Filter nurses by search query
+                              final filteredNurses = snapshot.data!.docs.where((doc) {
+                                final name = (doc['name'] ?? '').toString().toLowerCase();
+                                return name.contains(searchQuery);
+                              }).toList();
+
+                              if (filteredNurses.isEmpty) {
+                                return const Padding(
+                                  padding: EdgeInsets.all(16),
+                                  child: Text(
+                                    'No matching nurses found.',
+                                    style: TextStyle(fontSize: 16, color: Colors.grey),
+                                  ),
+                                );
+                              }
 
                               return ListView.separated(
                                 shrinkWrap: true,
                                 physics: const NeverScrollableScrollPhysics(),
-                                itemCount: nurses.length,
+                                itemCount: filteredNurses.length,
                                 separatorBuilder: (_, __) =>
                                     const SizedBox(height: 8),
                                 itemBuilder: (context, index) {
-                                  final nurse = nurses[index];
+                                  final nurse = filteredNurses[index];
                                   final name = nurse['name'] ?? 'Unnamed';
                                   final pin = nurse['pin'] ?? '';
 
