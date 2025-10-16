@@ -21,7 +21,15 @@ class DoctorDetailScreen extends StatefulWidget {
 }
 
 class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
-  String sortOption = "Name"; // Default sort
+  String sortOption = "Name";
+  String searchQuery = "";
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -72,18 +80,13 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                           return const Center(child: CircularProgressIndicator());
                         }
                         if (!snapshot.hasData || !snapshot.data!.exists) {
-                          return const Text(
-                            "Doctor not found.",
-                            style: TextStyle(fontSize: 18),
-                          );
+                          return const Text("Doctor not found.", style: TextStyle(fontSize: 18));
                         }
 
-                        final doctorData =
-                            snapshot.data!.data() as Map<String, dynamic>;
+                        final doctorData = snapshot.data!.data() as Map<String, dynamic>;
                         final contact = doctorData['contact'] ?? '';
                         final imageUrl = doctorData['photoUrl'] ?? '';
-                        final specialization =
-                            doctorData['specialization'] ?? '';
+                        final specialization = doctorData['specialization'] ?? '';
 
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -92,7 +95,6 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                /// Profile Image (Square)
                                 Container(
                                   width: 120,
                                   height: 120,
@@ -139,18 +141,12 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                                       const SizedBox(height: 6),
                                       Text(
                                         "Specialization: $specialization",
-                                        style: const TextStyle(
-                                          fontSize: 18,
-                                          color: Colors.black87,
-                                        ),
+                                        style: const TextStyle(fontSize: 18, color: Colors.black87),
                                       ),
                                       const SizedBox(height: 6),
                                       Text(
                                         "Contact: $contact",
-                                        style: const TextStyle(
-                                          fontSize: 18,
-                                          color: Colors.black87,
-                                        ),
+                                        style: const TextStyle(fontSize: 18, color: Colors.black87),
                                       ),
                                     ],
                                   ),
@@ -159,7 +155,7 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                             ),
                             const SizedBox(height: 30),
 
-                            /// 👩‍🦰 Assigned Patients Section Header
+                            /// 👩‍🦰 Assigned Patients Section Header + Search + Sort
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
@@ -171,34 +167,47 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                                     color: primaryColor,
                                   ),
                                 ),
-
-                                /// Sort Dropdown
                                 DropdownButton<String>(
                                   value: sortOption,
                                   style: const TextStyle(fontSize: 16, color: primaryColor),
                                   items: const [
-                                    DropdownMenuItem(
-                                      value: "Name",
-                                      child: Text("Sort by Name"),
-                                    ),
-                                    DropdownMenuItem(
-                                      value: "Mobile",
-                                      child: Text("Sort by Mobile Number"),
-                                    ),
+                                    DropdownMenuItem(value: "Name", child: Text("Sort by Name")),
+                                    DropdownMenuItem(value: "Mobile", child: Text("Sort by Mobile Number")),
                                   ],
                                   onChanged: (value) {
                                     if (value != null) {
-                                      setState(() {
-                                        sortOption = value;
-                                      });
+                                      setState(() => sortOption = value);
                                     }
                                   },
                                 ),
                               ],
                             ),
+
                             const SizedBox(height: 16),
 
-                            /// 🧾 Patient List
+                            /// 🔍 Search Bar (Stable)
+                            TextField(
+                              controller: _searchController,
+                              decoration: InputDecoration(
+                                hintText: "Search patient by name...",
+                                prefixIcon: const Icon(Icons.search),
+                                filled: true,
+                                fillColor: Colors.grey[100],
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: BorderSide.none,
+                                ),
+                              ),
+                              onChanged: (value) {
+                                searchQuery = value.toLowerCase();
+                                // 🧠 Only rebuild patient list, not the whole scroll view
+                                (context as Element).markNeedsBuild();
+                              },
+                            ),
+
+                            const SizedBox(height: 20),
+
+                            /// 🧾 Patient List (separate StreamBuilder to prevent full rebuild)
                             StreamBuilder<QuerySnapshot>(
                               stream: FirebaseFirestore.instance
                                   .collection('users')
@@ -207,53 +216,50 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                                   .where('status', isEqualTo: 'active')
                                   .snapshots(),
                               builder: (context, snapshot) {
-                                if (snapshot.connectionState ==
-                                    ConnectionState.waiting) {
-                                  return const Center(
-                                    child: CircularProgressIndicator(),
-                                  );
+                                if (snapshot.connectionState == ConnectionState.waiting) {
+                                  return const Center(child: CircularProgressIndicator());
                                 }
-                                if (!snapshot.hasData ||
-                                    snapshot.data!.docs.isEmpty) {
-                                  return const Text(
-                                    "No patients assigned to this doctor.",
-                                    style: TextStyle(fontSize: 16),
-                                  );
+                                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                                  return const Text("No patients assigned to this doctor.",
+                                      style: TextStyle(fontSize: 16));
                                 }
 
                                 /// Convert to list and sort
                                 final patients = snapshot.data!.docs.toList();
                                 patients.sort((a, b) {
                                   if (sortOption == "Name") {
-                                    final firstA =
-                                        (a['firstName'] ?? '').toString().toLowerCase();
-                                    final firstB =
-                                        (b['firstName'] ?? '').toString().toLowerCase();
-                                    final lastA =
-                                        (a['lastName'] ?? '').toString().toLowerCase();
-                                    final lastB =
-                                        (b['lastName'] ?? '').toString().toLowerCase();
-
+                                    final firstA = (a['firstName'] ?? '').toString().toLowerCase();
+                                    final firstB = (b['firstName'] ?? '').toString().toLowerCase();
+                                    final lastA = (a['lastName'] ?? '').toString().toLowerCase();
+                                    final lastB = (b['lastName'] ?? '').toString().toLowerCase();
                                     final firstCompare = firstA.compareTo(firstB);
                                     if (firstCompare != 0) return firstCompare;
                                     return lastA.compareTo(lastB);
                                   } else {
-                                    final mobileA =
-                                        (a['phone'] ?? '').toString().toLowerCase();
-                                    final mobileB =
-                                        (b['phone'] ?? '').toString().toLowerCase();
+                                    final mobileA = (a['phone'] ?? '').toString().toLowerCase();
+                                    final mobileB = (b['phone'] ?? '').toString().toLowerCase();
                                     return mobileA.compareTo(mobileB);
                                   }
                                 });
 
+                                /// 🔍 Filter by Search Query
+                                final filteredPatients = patients.where((doc) {
+                                  final data = doc.data() as Map<String, dynamic>;
+                                  final fullName =
+                                      "${(data['firstName'] ?? '').toString().toLowerCase()} ${(data['lastName'] ?? '').toString().toLowerCase()}";
+                                  return fullName.contains(searchQuery);
+                                }).toList();
+
+                                if (filteredPatients.isEmpty) {
+                                  return const Text("No patients found.", style: TextStyle(fontSize: 16));
+                                }
+
                                 return ListView.builder(
                                   shrinkWrap: true,
                                   physics: const NeverScrollableScrollPhysics(),
-                                  itemCount: patients.length,
+                                  itemCount: filteredPatients.length,
                                   itemBuilder: (context, index) {
-                                    final patient = patients[index];
-                                    final data =
-                                        patient.data() as Map<String, dynamic>;
+                                    final data = filteredPatients[index].data() as Map<String, dynamic>;
                                     final firstName = data['firstName'] ?? '';
                                     final lastName = data['lastName'] ?? '';
                                     final mobileNumber = data['phone'] ?? 'N/A';
@@ -262,11 +268,7 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                                       margin: const EdgeInsets.symmetric(vertical: 6),
                                       elevation: 2,
                                       child: ListTile(
-                                        leading: const Icon(
-                                          Icons.person,
-                                          color: primaryColor,
-                                          size: 30,
-                                        ),
+                                        leading: const Icon(Icons.person, color: primaryColor, size: 30),
                                         title: Text(
                                           "$firstName $lastName",
                                           style: const TextStyle(
@@ -276,10 +278,7 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                                         ),
                                         subtitle: Text(
                                           "Mobile: $mobileNumber",
-                                          style: const TextStyle(
-                                            fontSize: 16,
-                                            color: Colors.black54,
-                                          ),
+                                          style: const TextStyle(fontSize: 16, color: Colors.black54),
                                         ),
                                       ),
                                     );
