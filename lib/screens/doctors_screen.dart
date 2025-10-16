@@ -23,7 +23,8 @@ class DoctorsScreen extends StatefulWidget {
 }
 
 class _DoctorsScreenState extends State<DoctorsScreen> {
-  // --- Doctor list UI ---
+  String searchQuery = "";
+
   // --- Doctor list UI ---
   Widget _buildDoctorsList() {
     return StreamBuilder<QuerySnapshot>(
@@ -41,6 +42,18 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
         }
 
         var docs = snapshot.data!.docs;
+
+        // 🔍 Apply search filter
+        if (searchQuery.isNotEmpty) {
+          docs =
+              docs.where((doc) {
+                final data = doc.data() as Map<String, dynamic>;
+                final name = (data['name'] ?? '').toString().toLowerCase();
+                final email = (data['email'] ?? '').toString().toLowerCase();
+                return name.contains(searchQuery.toLowerCase()) ||
+                    email.contains(searchQuery.toLowerCase());
+              }).toList();
+        }
 
         if (docs.isEmpty) {
           return const Center(
@@ -112,7 +125,7 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                                 doctorName,
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 18, // 🔹 larger name font
+                                  fontSize: 18,
                                   color: Colors.black87,
                                 ),
                               ),
@@ -120,7 +133,7 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                               Text(
                                 doctorEmail,
                                 style: const TextStyle(
-                                  fontSize: 16, // 🔹 larger detail font
+                                  fontSize: 16,
                                   color: Colors.black87,
                                 ),
                               ),
@@ -224,7 +237,6 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                 }
 
                 try {
-                  // Step 1: Create user in Firebase Auth
                   UserCredential userCredential = await FirebaseAuth.instance
                       .createUserWithEmailAndPassword(
                         email: email,
@@ -233,7 +245,6 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
 
                   String doctorId = userCredential.user!.uid;
 
-                  // Step 2: Save doctor profile
                   await FirebaseFirestore.instance
                       .collection("doctor_inCharge")
                       .doc(doctorId)
@@ -246,7 +257,6 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                         "createdAt": FieldValue.serverTimestamp(),
                       });
 
-                  // Step 3: Also save to doctors_centers
                   await FirebaseFirestore.instance
                       .collection("doctors_centers")
                       .doc("doctor_center")
@@ -296,7 +306,6 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
     );
   }
 
-  // --- Reusable TextField Builder ---
   Widget _buildTextField(
     TextEditingController controller,
     String label, {
@@ -361,14 +370,49 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                     ),
                   ),
                 ),
+
+                // 🔍 Search Bar
                 const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 6),
                   child: Text(
                     'Doctors List',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontSize: 28, // ✅ upgraded from 18
+                      fontSize: 28,
                       color: primaryColor,
+                    ),
+                  ),
+                ),
+
+                // 🔍 Search Bar (now below the title)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
+                  child: TextField(
+                    onChanged:
+                        (value) => setState(() => searchQuery = value.trim()),
+                    decoration: InputDecoration(
+                      hintText: 'Search doctors by name or email...',
+                      prefixIcon: const Icon(Icons.search, color: primaryColor),
+                      filled: true,
+                      fillColor: Colors.white,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: primaryColor),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(
+                          color: primaryColor,
+                          width: 2,
+                        ),
+                      ),
                     ),
                   ),
                 ),
