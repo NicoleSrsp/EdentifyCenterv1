@@ -1078,9 +1078,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                                                     16,
                                                                   ),
                                                             ),
-                                                            title: const Text(
-                                                              'Dialysis Record Action',
-                                                              style: TextStyle(
+                                                            title: Text(
+                                                              'Dialysis Record Action - ${p['name'] ?? ''}',
+                                                              style: const TextStyle(
                                                                 fontWeight:
                                                                     FontWeight
                                                                         .bold,
@@ -1088,8 +1088,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                                             ),
                                                             content: Text(
                                                               hasTodayRecord
-                                                                  ? 'A dialysis record for today already exists. Would you like to edit it instead?'
-                                                                  : 'No dialysis record found for today. Would you like to add one now?',
+                                                                  ? 'A dialysis record for ${p['name'] ?? ''} already exists for today. Would you like to edit it instead?'
+                                                                  : 'No dialysis record found for ${p['name'] ?? ''} today. Would you like to add one now?',
                                                             ),
                                                             actions: [
                                                               TextButton(
