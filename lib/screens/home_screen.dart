@@ -1369,6 +1369,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     Text(
                                       monthYear, // 👈 Displays the formatted month + year
                                       style: const TextStyle(
+                                        color: Color(0xFF045347),
                                         fontSize: 28, // ✅ Updated
                                         fontWeight:
                                             FontWeight.bold, // ✅ Updated
