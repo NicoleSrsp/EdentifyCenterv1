@@ -167,135 +167,163 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
 
   // --- Add Doctor Dialog ---
   Future<void> _showAddDoctorDialog() async {
-    final firstNameController = TextEditingController();
-    final lastNameController = TextEditingController();
-    final emailController = TextEditingController();
-    final passwordController = TextEditingController();
-    final confirmPasswordController = TextEditingController();
+  final firstNameController = TextEditingController();
+  final lastNameController = TextEditingController();
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
+  final confirmPasswordController = TextEditingController();
 
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: Row(
-            children: const [
-              Icon(Icons.person_add_alt_1, color: primaryColor),
-              SizedBox(width: 8),
-              Text("Add Doctor", style: TextStyle(fontWeight: FontWeight.bold)),
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (context) {
+      return Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        elevation: 6,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          constraints: const BoxConstraints(maxWidth: 450),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 🩺 Header
+              Row(
+                children: const [
+                  Icon(Icons.person_add_alt_1, color: primaryColor, size: 28),
+                  SizedBox(width: 10),
+                  Text(
+                    "Add New Doctor",
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: darkerPrimaryColor,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              const Divider(thickness: 1, color: Colors.teal),
+
+              // 🧾 Form Fields
+              const SizedBox(height: 16),
+              _buildTextField(firstNameController, "First Name",
+                  icon: Icons.person_outline),
+              _buildTextField(lastNameController, "Last Name",
+                  icon: Icons.badge_outlined),
+              _buildTextField(emailController, "Email",
+                  keyboardType: TextInputType.emailAddress,
+                  icon: Icons.email_outlined),
+              _buildTextField(passwordController, "Password",
+                  obscureText: true, icon: Icons.lock_outline),
+              _buildTextField(confirmPasswordController, "Confirm Password",
+                  obscureText: true, icon: Icons.lock_reset_outlined),
+
+              const SizedBox(height: 24),
+
+              // 🧩 Action Buttons
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton.icon(
+                    icon: const Icon(Icons.close, color: Colors.black54),
+                    label: const Text(
+                      "Cancel",
+                      style: TextStyle(color: Colors.black54, fontSize: 16),
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  const SizedBox(width: 10),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.check_circle, color: Colors.white),
+                    label: const Text(
+                      "Add Doctor",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryColor,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      elevation: 3,
+                    ),
+                    onPressed: () async {
+                      final firstName = firstNameController.text.trim();
+                      final lastName = lastNameController.text.trim();
+                      final email = emailController.text.trim();
+                      final password = passwordController.text.trim();
+                      final confirmPassword =
+                          confirmPasswordController.text.trim();
+
+                      if (firstName.isEmpty ||
+                          lastName.isEmpty ||
+                          email.isEmpty ||
+                          password.isEmpty) {
+                        _showSnack("All fields are required");
+                        return;
+                      }
+
+                      if (password != confirmPassword) {
+                        _showSnack("Passwords do not match");
+                        return;
+                      }
+
+                      try {
+                        UserCredential userCredential = await FirebaseAuth
+                            .instance
+                            .createUserWithEmailAndPassword(
+                          email: email,
+                          password: password,
+                        );
+
+                        String doctorId = userCredential.user!.uid;
+
+                        await FirebaseFirestore.instance
+                            .collection("doctor_inCharge")
+                            .doc(doctorId)
+                            .set({
+                          "name": "$firstName $lastName",
+                          "firstName": firstName,
+                          "lastName": lastName,
+                          "email": email,
+                          "centerId": widget.centerId,
+                          "createdAt": FieldValue.serverTimestamp(),
+                        });
+
+                        await FirebaseFirestore.instance
+                            .collection("doctors_centers")
+                            .doc("doctor_center")
+                            .collection("doctors_center_collection")
+                            .doc(doctorId)
+                            .set({
+                          "doctorId": doctorId,
+                          "name": "$firstName $lastName",
+                          "email": email,
+                          "centerId": widget.centerId,
+                          "createdAt": FieldValue.serverTimestamp(),
+                        });
+
+                        Navigator.pop(context);
+                        _showSnack("Doctor added successfully", success: true);
+                      } catch (e) {
+                        _showSnack("Error: $e");
+                      }
+                    },
+                  ),
+                ],
+              ),
             ],
           ),
-          content: SingleChildScrollView(
-            child: Column(
-              children: [
-                _buildTextField(firstNameController, "First Name"),
-                _buildTextField(lastNameController, "Last Name"),
-                _buildTextField(
-                  emailController,
-                  "Email",
-                  keyboardType: TextInputType.emailAddress,
-                ),
-                _buildTextField(
-                  passwordController,
-                  "Password",
-                  obscureText: true,
-                ),
-                _buildTextField(
-                  confirmPasswordController,
-                  "Confirm Password",
-                  obscureText: true,
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
-            ),
-            ElevatedButton.icon(
-              onPressed: () async {
-                final firstName = firstNameController.text.trim();
-                final lastName = lastNameController.text.trim();
-                final email = emailController.text.trim();
-                final password = passwordController.text.trim();
-                final confirmPassword = confirmPasswordController.text.trim();
+        ),
+      );
+    },
+  );
+}
 
-                if (firstName.isEmpty ||
-                    lastName.isEmpty ||
-                    email.isEmpty ||
-                    password.isEmpty) {
-                  _showSnack("All fields are required");
-                  return;
-                }
-
-                if (password != confirmPassword) {
-                  _showSnack("Passwords do not match");
-                  return;
-                }
-
-                try {
-                  UserCredential userCredential = await FirebaseAuth.instance
-                      .createUserWithEmailAndPassword(
-                        email: email,
-                        password: password,
-                      );
-
-                  String doctorId = userCredential.user!.uid;
-
-                  await FirebaseFirestore.instance
-                      .collection("doctor_inCharge")
-                      .doc(doctorId)
-                      .set({
-                        "name": "$firstName $lastName",
-                        "firstName": firstName,
-                        "lastName": lastName,
-                        "email": email,
-                        "centerId": widget.centerId,
-                        "createdAt": FieldValue.serverTimestamp(),
-                      });
-
-                  await FirebaseFirestore.instance
-                      .collection("doctors_centers")
-                      .doc("doctor_center")
-                      .collection("doctors_center_collection")
-                      .doc(doctorId)
-                      .set({
-                        "doctorId": doctorId,
-                        "name": "$firstName $lastName",
-                        "email": email,
-                        "centerId": widget.centerId,
-                        "createdAt": FieldValue.serverTimestamp(),
-                      });
-
-                  Navigator.pop(context);
-                  _showSnack("Doctor added successfully", success: true);
-                } catch (e) {
-                  _showSnack("Error: $e");
-                }
-              },
-              icon: const Icon(Icons.check, size: 18, color: Colors.white),
-              label: const Text(
-                "Add",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryColor,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
 
   void _showSnack(String message, {bool success = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -311,6 +339,7 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
     String label, {
     bool obscureText = false,
     TextInputType? keyboardType,
+    IconData? icon,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -325,6 +354,7 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
             borderSide: const BorderSide(color: primaryColor),
             borderRadius: BorderRadius.circular(8),
           ),
+          prefixIcon: icon != null ? Icon(icon, color: primaryColor) : null,
         ),
       ),
     );
