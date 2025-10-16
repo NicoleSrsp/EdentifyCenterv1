@@ -21,6 +21,8 @@ class PatientDetailScreen extends StatefulWidget {
 }
 
 class _PatientDetailScreenState extends State<PatientDetailScreen> {
+  String _sortOrder = "desc"; // default sorting (newest first)
+
   // 🔹 Store verified nurse after verification (used when editing)
   Map<String, dynamic>? _verifiedNurse;
 
@@ -159,43 +161,78 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 16,
                               ),
-                              child: Align(
-                                alignment: Alignment.centerRight,
-                                child: ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: SideMenu.primaryColor,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(30),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 20,
-                                      vertical: 12,
-                                    ),
-                                  ),
-                                  icon: const Icon(
-                                    Icons.add,
-                                    color: Colors.white,
-                                  ),
-                                  label: const Text(
-                                    "Add Record",
-                                    style: TextStyle(color: Colors.white),
-                                  ),
-                                  onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder:
-                                            (_) => AddPatientRecordScreen(
-                                              patientId: widget.patientId,
-                                              centerId: widget.centerId,
-                                              centerName: widget.centerName,
-                                            ),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  // 🔹 Sorting Dropdown
+                                  Row(
+                                    children: [
+                                      const Text(
+                                        "Sort by:",
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                       ),
-                                    );
-                                  },
-                                ),
+                                      const SizedBox(width: 8),
+                                      DropdownButton<String>(
+                                        value: _sortOrder,
+                                        items: const [
+                                          DropdownMenuItem(
+                                            value: "desc",
+                                            child: Text("Newest First"),
+                                          ),
+                                          DropdownMenuItem(
+                                            value: "asc",
+                                            child: Text("Oldest First"),
+                                          ),
+                                        ],
+                                        onChanged: (value) {
+                                          setState(() => _sortOrder = value!);
+                                        },
+                                      ),
+                                    ],
+                                  ),
+
+                                  // 🔹 Add Record Button
+                                  ElevatedButton.icon(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: SideMenu.primaryColor,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(30),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 20,
+                                        vertical: 12,
+                                      ),
+                                    ),
+                                    icon: const Icon(
+                                      Icons.add,
+                                      color: Colors.white,
+                                    ),
+                                    label: const Text(
+                                      "Add Record",
+                                      style: TextStyle(color: Colors.white),
+                                    ),
+                                    onPressed: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder:
+                                              (_) => AddPatientRecordScreen(
+                                                patientId: widget.patientId,
+                                                centerId: widget.centerId,
+                                                centerName: widget.centerName,
+                                              ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ],
                               ),
                             ),
+
                             const SizedBox(height: 8),
 
                             // 🔹 Records list
@@ -206,7 +243,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                                         .collection("users")
                                         .doc(widget.patientId)
                                         .collection("records")
-                                        .orderBy("createdAt", descending: true)
+                                        .orderBy("createdAt", descending: _sortOrder == "desc")
                                         .snapshots(),
                                 builder: (context, snapshot) {
                                   if (snapshot.connectionState ==
