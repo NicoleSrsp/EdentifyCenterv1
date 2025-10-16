@@ -335,29 +335,59 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
   Widget _buildTextField(
     String label,
     TextEditingController controller, {
+    IconData? icon,
     TextInputType keyboard = TextInputType.number,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: TextFormField(
         controller: controller,
         keyboardType: keyboard,
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
         decoration: InputDecoration(
+          prefixIcon:
+              icon != null
+                  ? Container(
+                    margin: const EdgeInsets.only(right: 8, left: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.teal.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(icon, color: Colors.teal.shade700, size: 22),
+                  )
+                  : null,
           labelText: label,
-          labelStyle: const TextStyle(color: Colors.black87),
-          filled: true,
-          fillColor: Colors.grey[50],
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 14,
+          labelStyle: TextStyle(
+            color: Colors.grey.shade700,
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
           ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.teal.shade300),
+          floatingLabelStyle: TextStyle(
+            color: Colors.teal.shade800,
+            fontWeight: FontWeight.w700,
+            fontSize: 16,
+          ),
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 18,
+            vertical: 16,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide(color: Colors.teal.shade700, width: 1.5),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.teal.shade600, width: 1.8),
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide(color: Colors.teal.shade700, width: 2),
+          ),
+          focusedErrorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide(color: Colors.red.shade400, width: 1.5),
+          ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide(color: Colors.red.shade200, width: 1.5),
           ),
         ),
       ),
@@ -466,28 +496,63 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
                             ),
                             child: Padding(
                               padding: const EdgeInsets.all(16),
-                              child: Column(
-                                children: [
-                                  _buildTextField(
-                                    "Pre-Weight (kg)",
-                                    _preWeightController,
-                                  ),
-                                  _buildTextField(
-                                    "Post-Weight (kg)",
-                                    _postWeightController,
-                                  ),
-                                  _buildTextField(
-                                    "UF Goal (L)",
-                                    _ufGoalController,
-                                  ),
-                                  _buildTextField(
-                                    "UF Removed (L)",
-                                    _ufRemovedController,
-                                  ),
-                                ],
+                              child: LayoutBuilder(
+                                builder: (context, constraints) {
+                                  final isWide =
+                                      constraints.maxWidth >
+                                      600; // responsive layout
+                                  return Wrap(
+                                    spacing: 20,
+                                    runSpacing: 10,
+                                    children: [
+                                      SizedBox(
+                                        width:
+                                            isWide
+                                                ? constraints.maxWidth / 2 - 20
+                                                : double.infinity,
+                                        child: _buildTextField(
+                                          "Pre-Weight (kg)",
+                                          _preWeightController,
+                                        ),
+                                      ),
+                                      SizedBox(
+                                        width:
+                                            isWide
+                                                ? constraints.maxWidth / 2 - 20
+                                                : double.infinity,
+                                        child: _buildTextField(
+                                          "Post-Weight (kg)",
+                                          _postWeightController,
+                                        ),
+                                      ),
+                                      SizedBox(
+                                        width:
+                                            isWide
+                                                ? constraints.maxWidth / 2 - 20
+                                                : double.infinity,
+                                        child: _buildTextField(
+                                          "UF Goal (L)",
+                                          _ufGoalController,
+                                        ),
+                                      ),
+                                      SizedBox(
+                                        width:
+                                            isWide
+                                                ? constraints.maxWidth / 2 - 20
+                                                : double.infinity,
+                                        child: _buildTextField(
+                                          "UF Removed (L)",
+                                          _ufRemovedController,
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                },
                               ),
                             ),
                           ),
+
+                          const SizedBox(height: 24),
                           const SizedBox(height: 24),
                           _buildSectionHeader(
                             "Vital Signs",
@@ -501,36 +566,74 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
                             ),
                             child: Padding(
                               padding: const EdgeInsets.all(16),
-                              child: Column(
-                                children: [
-                                  _buildTextField(
-                                    "Blood Pressure (mmHg)",
-                                    _bpController,
-                                  ),
-                                  _buildTextField(
-                                    "Pulse Rate (bpm)",
-                                    _pulseController,
-                                  ),
-                                  _buildTextField(
-                                    "Temperature (°C)",
-                                    _tempController,
-                                    keyboard:
-                                        const TextInputType.numberWithOptions(
-                                          decimal: true,
+                              child: LayoutBuilder(
+                                builder: (context, constraints) {
+                                  final isWide = constraints.maxWidth > 600;
+                                  return Wrap(
+                                    spacing: 20,
+                                    runSpacing: 10,
+                                    children: [
+                                      SizedBox(
+                                        width:
+                                            isWide
+                                                ? constraints.maxWidth / 2 - 20
+                                                : double.infinity,
+                                        child: _buildTextField(
+                                          "Blood Pressure (mmHg)",
+                                          _bpController,
                                         ),
-                                  ),
-                                  _buildTextField(
-                                    "Respiration Rate",
-                                    _respirationController,
-                                  ),
-                                  _buildTextField(
-                                    "Oxygen Saturation (%)",
-                                    _o2Controller,
-                                  ),
-                                ],
+                                      ),
+                                      SizedBox(
+                                        width:
+                                            isWide
+                                                ? constraints.maxWidth / 2 - 20
+                                                : double.infinity,
+                                        child: _buildTextField(
+                                          "Pulse Rate (bpm)",
+                                          _pulseController,
+                                        ),
+                                      ),
+                                      SizedBox(
+                                        width:
+                                            isWide
+                                                ? constraints.maxWidth / 2 - 20
+                                                : double.infinity,
+                                        child: _buildTextField(
+                                          "Temperature (°C)",
+                                          _tempController,
+                                          keyboard:
+                                              const TextInputType.numberWithOptions(
+                                                decimal: true,
+                                              ),
+                                        ),
+                                      ),
+                                      SizedBox(
+                                        width:
+                                            isWide
+                                                ? constraints.maxWidth / 2 - 20
+                                                : double.infinity,
+                                        child: _buildTextField(
+                                          "Respiration Rate",
+                                          _respirationController,
+                                        ),
+                                      ),
+                                      SizedBox(
+                                        width:
+                                            isWide
+                                                ? constraints.maxWidth / 2 - 20
+                                                : double.infinity,
+                                        child: _buildTextField(
+                                          "Oxygen Saturation (%)",
+                                          _o2Controller,
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                },
                               ),
                             ),
                           ),
+
                           const SizedBox(height: 80),
                         ],
                       ),

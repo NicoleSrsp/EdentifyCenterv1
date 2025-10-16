@@ -25,6 +25,7 @@ class EdentifyApp extends StatelessWidget {
       title: 'Edentify Dashboard',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
+        useMaterial3: false,
         scaffoldBackgroundColor: Colors.white,
         colorScheme: ColorScheme.fromSwatch().copyWith(
           primary: const Color.fromARGB(255, 0, 121, 107),

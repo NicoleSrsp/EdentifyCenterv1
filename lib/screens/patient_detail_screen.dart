@@ -21,9 +21,7 @@ class PatientDetailScreen extends StatefulWidget {
 }
 
 class _PatientDetailScreenState extends State<PatientDetailScreen> {
-  String _sortOrder = "desc"; // default sorting (newest first)
-
-  // 🔹 Store verified nurse after verification (used when editing)
+  String _sortOrder = "desc";
   Map<String, dynamic>? _verifiedNurse;
 
   @override
@@ -61,7 +59,6 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // 🔹 Header
                       Container(
                         color: const Color(0xFF045347),
                         padding: const EdgeInsets.symmetric(
@@ -84,8 +81,6 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
-
-                      // 🔹 Patient Info
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Card(
@@ -150,10 +145,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                           ),
                         ),
                       ),
-
                       const SizedBox(height: 16),
-
-                      // 🔹 Records
                       Expanded(
                         child: Column(
                           children: [
@@ -165,7 +157,6 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
-                                  // 🔹 Sorting Dropdown
                                   Row(
                                     children: [
                                       const Text(
@@ -194,8 +185,6 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                                       ),
                                     ],
                                   ),
-
-                                  // 🔹 Add Record Button
                                   ElevatedButton.icon(
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: SideMenu.primaryColor,
@@ -232,10 +221,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                                 ],
                               ),
                             ),
-
                             const SizedBox(height: 8),
-
-                            // 🔹 Records list
                             Expanded(
                               child: StreamBuilder<QuerySnapshot>(
                                 stream:
@@ -243,7 +229,10 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                                         .collection("users")
                                         .doc(widget.patientId)
                                         .collection("records")
-                                        .orderBy("createdAt", descending: _sortOrder == "desc")
+                                        .orderBy(
+                                          "createdAt",
+                                          descending: _sortOrder == "desc",
+                                        )
                                         .snapshots(),
                                 builder: (context, snapshot) {
                                   if (snapshot.connectionState ==
@@ -252,7 +241,6 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                                       child: CircularProgressIndicator(),
                                     );
                                   }
-
                                   if (!snapshot.hasData ||
                                       snapshot.data!.docs.isEmpty) {
                                     return const Center(
@@ -305,8 +293,6 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                                                     "Pre-Weight: ${record['preWeight'] ?? ''} | Post-Weight: ${record['postWeight'] ?? ''}",
                                                   ),
                                                   const SizedBox(height: 4),
-
-                                                  // ✅ If record was updated, show "Updated by Nurse X"
                                                   if (record['updatedBy'] !=
                                                           null &&
                                                       record['updatedBy']
@@ -321,7 +307,6 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                                                             FontStyle.italic,
                                                       ),
                                                     )
-                                                  // ✅ Else if only nurseName exists (new record), show "Added by Nurse X"
                                                   else if (record['nurseName'] !=
                                                           null &&
                                                       record['nurseName']
@@ -338,7 +323,6 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                                                     ),
                                                 ],
                                               ),
-
                                               trailing: IconButton(
                                                 icon: const Icon(
                                                   Icons.edit,
@@ -462,228 +446,199 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                   child: ListView(
                     children: [
                       const SizedBox(height: 10),
-                      _buildSectionHeader(
-                        Icons.monitor_weight,
-                        "Dialysis Information",
-                      ),
-                      const SizedBox(height: 8),
-                      Card(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        elevation: 3,
-                        child: Padding(
-                          padding: const EdgeInsets.all(20),
-                          child: Wrap(
-                            spacing: 16,
-                            runSpacing: 16,
-                            children: [
-                              _buildEditField(
-                                "Pre-Weight (kg)",
-                                preWeightController,
-                                width: 300,
-                              ),
-                              _buildEditField(
-                                "Post-Weight (kg)",
-                                postWeightController,
-                                width: 300,
-                              ),
-                              _buildEditField(
-                                "UF Goal (L)",
-                                ufGoalController,
-                                width: 300,
-                              ),
-                              _buildEditField(
-                                "UF Removed (L)",
-                                ufRemovedController,
-                                width: 300,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      _buildSectionHeader(Icons.favorite, "Vital Signs"),
-                      const SizedBox(height: 8),
-                      Card(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        elevation: 3,
-                        child: Padding(
-                          padding: const EdgeInsets.all(20),
-                          child: Wrap(
-                            spacing: 16,
-                            runSpacing: 16,
-                            children: [
-                              _buildEditField(
-                                "Blood Pressure (mmHg)",
-                                bpController,
-                                width: 300,
-                              ),
-                              _buildEditField(
-                                "Pulse Rate (bpm)",
-                                pulseController,
-                                width: 300,
-                              ),
-                              _buildEditField(
-                                "Temperature (°C)",
-                                tempController,
-                                width: 300,
-                              ),
-                              _buildEditField(
-                                "Respiration Rate",
-                                respirationController,
-                                width: 300,
-                              ),
-                              _buildEditField(
-                                "Oxygen Saturation (%)",
-                                o2Controller,
-                                width: 300,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 28),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF045347),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 14,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                            elevation: 5,
-                          ),
-                          icon: const Icon(Icons.save, color: Colors.white),
-                          label: const Text(
-                            "Save Changes",
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
-                          ),
-                          onPressed: () async {
-                            if (_formKey.currentState!.validate()) {
-                              final nurseInfo =
-                                  await _promptNurseVerification();
-                              if (nurseInfo == null) return;
-
-                              final updatedData = {
-                                'preWeight': preWeightController.text,
-                                'postWeight': postWeightController.text,
-                                'ufGoal': ufGoalController.text,
-                                'ufRemoved': ufRemovedController.text,
-                                'bloodPressure': bpController.text,
-                                'pulseRate': pulseController.text,
-                                'temperature': tempController.text,
-                                'respiration': respirationController.text,
-                                'oxygenSaturation': o2Controller.text,
-                                'updatedAt': FieldValue.serverTimestamp(),
-                                'updatedBy': _verifiedNurse?['nurseName'],
-                                'nurseName': nurseInfo['nurseName'],
-                              };
-
-                              // 🔹 Update Firestore record
-                              await FirebaseFirestore.instance
-                                  .collection('users')
-                                  .doc(patientId)
-                                  .collection('records')
-                                  .doc(recordId)
-                                  .update(updatedData);
-
-                              try {
-                                // 🗓️ Use the record’s actual date from Firestore
-                                final recordDateString =
-                                    record['date'] ??
-                                    recordId; // e.g. "2025-10-13"
-                                final recordDate = DateTime.parse(
-                                  recordDateString,
-                                );
-                                final formattedDate = DateFormat(
-                                  'MMM dd, yyyy',
-                                ).format(recordDate); // e.g. Oct 13, 2025
-
-                                // 🟢 Determine if this is an update (based on whether data already exists)
-                                final bool isUpdate =
-                                    record
-                                        .isNotEmpty; // ✅ works for Map-based records
-
-                                final nurseName =
-                                    _verifiedNurse?['nurseName'] ?? 'Nurse';
-
-                                final title =
-                                    isUpdate
-                                        ? 'Dialysis Record Updated'
-                                        : 'New Dialysis Record Added';
-
-                                final message =
-                                    isUpdate
-                                        ? '$nurseName updated your dialysis record for $formattedDate.'
-                                        : '$nurseName added your dialysis record for $formattedDate.';
-
-                                // 🟢 Send notification to patient
-                                await FirebaseFirestore.instance
-                                    .collection('users')
-                                    .doc(widget.patientId.trim())
-                                    .collection('notifications')
-                                    .add({
-                                      'title': title,
-                                      'message': message,
-                                      'createdAt': FieldValue.serverTimestamp(),
-                                      'read': false,
-                                      'type': 'treatment_record',
-                                      'recordDate':
-                                          recordId, // ✅ match Firestore doc ID
-                                    });
-
-                                debugPrint(
-                                  "✅ Notification sent for $formattedDate",
-                                );
-                              } catch (e) {
-                                debugPrint("⚠️ Error sending notification: $e");
-                              }
-
-                              Navigator.pop(context);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Row(
-                                    children: const [
-                                      Icon(
-                                        Icons.check_circle,
-                                        color: Colors.white,
-                                      ),
-                                      SizedBox(width: 8),
-                                      Text(
-                                        'Record updated successfully',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  backgroundColor:
-                                      Theme.of(context).colorScheme.primary,
-                                  behavior: SnackBarBehavior.floating,
-                                  margin: const EdgeInsets.all(16),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  duration: const Duration(seconds: 2),
+                      Center(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.monitor_weight,
+                                  color: Colors.teal.shade700,
                                 ),
-                              );
-                            }
-                          },
+                                const SizedBox(width: 8),
+                                Text(
+                                  "Dialysis Information",
+                                  style: TextStyle(
+                                    color: Colors.teal.shade800,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Card(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              elevation: 3,
+                              child: Padding(
+                                padding: const EdgeInsets.all(20),
+                                child: Wrap(
+                                  alignment: WrapAlignment.center,
+                                  spacing: 16,
+                                  runSpacing: 16,
+                                  children: [
+                                    _buildEditField(
+                                      "Pre-Weight (kg)",
+                                      preWeightController,
+                                      width: 400,
+                                    ),
+                                    _buildEditField(
+                                      "Post-Weight (kg)",
+                                      postWeightController,
+                                      width: 400,
+                                    ),
+                                    _buildEditField(
+                                      "UF Goal (L)",
+                                      ufGoalController,
+                                      width: 400,
+                                    ),
+                                    _buildEditField(
+                                      "UF Removed (L)",
+                                      ufRemovedController,
+                                      width: 400,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.favorite,
+                                  color: Colors.teal.shade700,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  "Vital Signs",
+                                  style: TextStyle(
+                                    color: Colors.teal.shade800,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Card(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              elevation: 3,
+                              child: Padding(
+                                padding: const EdgeInsets.all(20),
+                                child: Wrap(
+                                  alignment: WrapAlignment.center,
+                                  spacing: 16,
+                                  runSpacing: 16,
+                                  children: [
+                                    _buildEditField(
+                                      "Blood Pressure (mmHg)",
+                                      bpController,
+                                      width: 400,
+                                    ),
+                                    _buildEditField(
+                                      "Pulse Rate (bpm)",
+                                      pulseController,
+                                      width: 400,
+                                    ),
+                                    _buildEditField(
+                                      "Temperature (°C)",
+                                      tempController,
+                                      width: 400,
+                                    ),
+                                    _buildEditField(
+                                      "Respiration Rate",
+                                      respirationController,
+                                      width: 400,
+                                    ),
+                                    _buildEditField(
+                                      "Oxygen Saturation (%)",
+                                      o2Controller,
+                                      width: 400,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 100),
+                          ],
                         ),
                       ),
                     ],
                   ),
+                ),
+              ),
+              floatingActionButton: Container(
+                margin: const EdgeInsets.only(bottom: 10, right: 10),
+                child: FloatingActionButton.extended(
+                  onPressed: () async {
+                    if (_formKey.currentState!.validate()) {
+                      final nurseInfo = await _promptNurseVerification();
+                      if (nurseInfo == null) return;
+                      final updatedData = {
+                        'preWeight': preWeightController.text,
+                        'postWeight': postWeightController.text,
+                        'ufGoal': ufGoalController.text,
+                        'ufRemoved': ufRemovedController.text,
+                        'bloodPressure': bpController.text,
+                        'pulseRate': pulseController.text,
+                        'temperature': tempController.text,
+                        'respiration': respirationController.text,
+                        'oxygenSaturation': o2Controller.text,
+                        'updatedAt': FieldValue.serverTimestamp(),
+                        'updatedBy': _verifiedNurse?['nurseName'],
+                        'nurseName': nurseInfo['nurseName'],
+                      };
+
+                      await FirebaseFirestore.instance
+                          .collection('users')
+                          .doc(patientId)
+                          .collection('records')
+                          .doc(recordId)
+                          .update(updatedData);
+
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Row(
+                            children: const [
+                              Icon(Icons.check_circle, color: Colors.white),
+                              SizedBox(width: 8),
+                              Text(
+                                'Record updated successfully',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                          backgroundColor: Colors.teal.shade700,
+                          behavior: SnackBarBehavior.floating,
+                          margin: const EdgeInsets.all(16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.save, color: Colors.white),
+                  label: const Text(
+                    "Save Changes",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  backgroundColor: Colors.teal.shade700,
                 ),
               ),
             ),
@@ -693,42 +648,43 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
     );
   }
 
-  Widget _buildSectionHeader(IconData icon, String title) {
-    return Row(
-      children: [
-        Icon(icon, color: Colors.teal.shade700),
-        const SizedBox(width: 8),
-        Text(
-          title,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-      ],
-    );
-  }
-
   Widget _buildEditField(
     String label,
     TextEditingController controller, {
     TextInputType keyboard = TextInputType.number,
-    double width = double.infinity,
+    double width = 400,
   }) {
     return SizedBox(
       width: width,
       child: TextFormField(
         controller: controller,
         keyboardType: keyboard,
+        cursorColor: Colors.teal.shade700,
+        style: TextStyle(
+          color: Colors.teal.shade800,
+          fontWeight: FontWeight.w600,
+          fontSize: 16,
+        ),
         decoration: InputDecoration(
           labelText: label,
+          labelStyle: TextStyle(
+            color: Colors.teal.shade700,
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
+          ),
           filled: true,
           fillColor: Colors.grey[100],
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          enabledBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: Colors.teal.shade700, width: 1.2),
+            borderRadius: BorderRadius.circular(12),
+          ),
           focusedBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: Colors.teal.shade700, width: 1.5),
+            borderSide: BorderSide(color: Colors.teal.shade700, width: 2),
             borderRadius: BorderRadius.circular(12),
           ),
           contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 14,
+            horizontal: 20,
+            vertical: 18,
           ),
         ),
       ),
