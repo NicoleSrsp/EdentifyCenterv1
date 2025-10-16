@@ -46,455 +46,297 @@ class _PatientListScreenState extends State<PatientListScreen> {
   }
 
   /// Modern Add Patient Dialog
-  void _showAddPatientDialog() {
-    final TextEditingController firstNameController = TextEditingController();
-    final TextEditingController middleNameController = TextEditingController();
-    final TextEditingController lastNameController = TextEditingController();
-    final TextEditingController birthdayController = TextEditingController();
-    final TextEditingController phoneController = TextEditingController();
-    final TextEditingController emailController = TextEditingController();
-    final TextEditingController addressController = TextEditingController();
-    final TextEditingController startDateController = TextEditingController();
-    final TextEditingController healthController = TextEditingController();
-    final TextEditingController passwordController = TextEditingController();
-    final TextEditingController confirmPasswordController =
-        TextEditingController();
-
+  Future<void> _showAddPatientDialog() async {
+    final firstNameController = TextEditingController();
+    final middleNameController = TextEditingController();
+    final lastNameController = TextEditingController();
+    final birthdayController = TextEditingController();
+    final phoneController = TextEditingController();
+    final emailController = TextEditingController();
+    final addressController = TextEditingController();
+    final healthConditionController = TextEditingController();
     String? selectedDoctorId;
-    String? selectedDoctorName;
 
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) {
         return Dialog(
-          insetPadding: const EdgeInsets.symmetric(
-            horizontal: 100,
-            vertical: 50,
-          ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
-          child: StatefulBuilder(
-            builder: (context, setState) {
-              return Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  color: Colors.white,
+          elevation: 6,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            constraints: const BoxConstraints(maxWidth: 550, maxHeight: 700),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 👤 Header
+                Row(
+                  children: const [
+                    Icon(Icons.person_add_alt_1, color: primaryColor, size: 28),
+                    SizedBox(width: 10),
+                    Text(
+                      "Add New Patient",
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: darkerPrimaryColor,
+                      ),
+                    ),
+                  ],
                 ),
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      /// Header
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            "Add New Patient",
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: darkerPrimaryColor,
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(
-                              Icons.close,
-                              color: Colors.black54,
-                            ),
-                            onPressed: () => Navigator.pop(context),
-                          ),
-                        ],
+                const SizedBox(height: 18),
+                const Divider(thickness: 1, color: Colors.teal),
+
+                // 🧾 Form Fields
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildTextField(
+                        firstNameController,
+                        "First Name",
+                        icon: Icons.person_outline,
                       ),
-                      const SizedBox(height: 16),
-
-                      /// Personal Information Card
-                      Card(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        elevation: 2,
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                "Personal Information",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              const Divider(),
-                              const SizedBox(height: 8),
-                              TextField(
-                                controller: firstNameController,
-                                decoration: const InputDecoration(
-                                  labelText: 'First Name',
-                                ),
-                              ),
-                              TextField(
-                                controller: middleNameController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Middle Name',
-                                ),
-                              ),
-                              TextField(
-                                controller: lastNameController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Last Name',
-                                ),
-                              ),
-                              TextField(
-                                controller: birthdayController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Birthday (YYYY-MM-DD)',
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildTextField(
+                        middleNameController,
+                        "Middle Name",
+                        icon: Icons.person_2_outlined,
                       ),
-
-                      const SizedBox(height: 16),
-
-                      /// Contact Information Card
-                      Card(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        elevation: 2,
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                "Contact Information",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              const Divider(),
-                              const SizedBox(height: 8),
-                              TextField(
-                                controller: phoneController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Phone Number',
-                                ),
-                                keyboardType: TextInputType.phone,
-                              ),
-                              TextField(
-                                controller: emailController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Email',
-                                ),
-                                keyboardType: TextInputType.emailAddress,
-                              ),
-                              TextField(
-                                controller: addressController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Address',
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      /// Health Information Card
-                      Card(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        elevation: 2,
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                "Health Information",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              const Divider(),
-                              const SizedBox(height: 8),
-                              TextField(
-                                controller: startDateController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Start of Treatment (YYYY-MM-DD)',
-                                ),
-                              ),
-                              TextField(
-                                controller: healthController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Health Condition(s)',
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              StreamBuilder<QuerySnapshot>(
-                                stream:
-                                    FirebaseFirestore.instance
-                                        .collection('doctor_inCharge')
-                                        .where(
-                                          'centerId',
-                                          isEqualTo: widget.centerId,
-                                        )
-                                        .snapshots(),
-                                builder: (context, snapshot) {
-                                  if (!snapshot.hasData) {
-                                    return const Center(
-                                      child: CircularProgressIndicator(),
-                                    );
-                                  }
-
-                                  final docs = snapshot.data!.docs;
-
-                                  if (docs.isEmpty) {
-                                    return const Text("No doctors available.");
-                                  }
-
-                                  return DropdownButtonFormField<String>(
-                                    decoration: const InputDecoration(
-                                      labelText: "Assign Doctor",
-                                    ),
-                                    value: selectedDoctorId,
-                                    items:
-                                        docs.map((doc) {
-                                          final data =
-                                              doc.data()
-                                                  as Map<String, dynamic>;
-                                          return DropdownMenuItem<String>(
-                                            value: doc.id,
-                                            child: Text(
-                                              data['name'] ?? "No Name",
-                                            ),
-                                          );
-                                        }).toList(),
-                                    onChanged: (value) {
-                                      if (value != null) {
-                                        setState(() {
-                                          selectedDoctorId = value;
-                                          final doctorDoc = docs.firstWhere(
-                                            (d) => d.id == value,
-                                          );
-                                          selectedDoctorName =
-                                              (doctorDoc.data()
-                                                  as Map<
-                                                    String,
-                                                    dynamic
-                                                  >)['name'];
-                                        });
-                                      }
-                                    },
-                                  );
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      /// Account Information Card
-                      Card(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        elevation: 2,
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                "Account Information",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              const Divider(),
-                              const SizedBox(height: 8),
-                              TextField(
-                                controller: passwordController,
-                                obscureText: true,
-                                decoration: const InputDecoration(
-                                  labelText: 'Password',
-                                ),
-                              ),
-                              TextField(
-                                controller: confirmPasswordController,
-                                obscureText: true,
-                                decoration: const InputDecoration(
-                                  labelText: 'Confirm Password',
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      /// Action Buttons
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: const Text("Cancel"),
-                          ),
-                          const SizedBox(width: 8),
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: primaryColor,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 24,
-                                vertical: 12,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                            onPressed: () async {
-                              final firstName = firstNameController.text.trim();
-                              final middleName =
-                                  middleNameController.text.trim();
-                              final lastName = lastNameController.text.trim();
-                              final birthday = birthdayController.text.trim();
-                              final phone = phoneController.text.trim();
-                              final email = emailController.text.trim();
-                              final address = addressController.text.trim();
-                              final startDate = startDateController.text.trim();
-                              final health = healthController.text.trim();
-                              final password = passwordController.text.trim();
-                              final confirmPassword =
-                                  confirmPasswordController.text.trim();
-
-                              if (firstName.isEmpty ||
-                                  lastName.isEmpty ||
-                                  birthday.isEmpty ||
-                                  phone.isEmpty ||
-                                  address.isEmpty ||
-                                  startDate.isEmpty ||
-                                  health.isEmpty ||
-                                  password.isEmpty ||
-                                  email.isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text("All fields are required."),
-                                  ),
-                                );
-                                return;
-                              }
-
-                              if (password != confirmPassword) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text("Passwords do not match."),
-                                  ),
-                                );
-                                return;
-                              }
-
-                              if (selectedDoctorId == null ||
-                                  selectedDoctorName == null) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text("Please assign a doctor."),
-                                  ),
-                                );
-                                return;
-                              }
-
-                              try {
-                                UserCredential cred = await FirebaseAuth
-                                    .instance
-                                    .createUserWithEmailAndPassword(
-                                      email: email,
-                                      password: password,
-                                    );
-
-                                final uid = cred.user!.uid;
-
-                                await FirebaseFirestore.instance
-                                    .collection('users')
-                                    .doc(uid)
-                                    .set({
-                                      'firstName': firstName,
-                                      'middleName': middleName,
-                                      'lastName': lastName,
-                                      'birthday': birthday,
-                                      'phone': phone,
-                                      'email': email,
-                                      'address': address,
-                                      'startDate': startDate,
-                                      'healthConditions': health,
-                                      'centerId': widget.centerId,
-                                      'centerName': widget.centerName,
-                                      'doctorId': selectedDoctorId,
-                                      'doctorName': selectedDoctorName,
-                                      'status': 'active',
-                                      'createdAt': FieldValue.serverTimestamp(),
-                                    });
-
-                                await FirebaseFirestore.instance
-                                    .collection('users')
-                                    .doc(selectedDoctorId)
-                                    .collection('notifications')
-                                    .add({
-                                      'title': 'New Patient Assigned',
-                                      'message':
-                                          '$firstName $lastName has been assigned to you.',
-                                      'patientId': uid,
-                                      'createdAt': FieldValue.serverTimestamp(),
-                                      'read': false,
-                                    });
-
-                                Navigator.pop(context);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      "Patient added successfully.",
-                                    ),
-                                  ),
-                                );
-                              } on FirebaseAuthException catch (e) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text("Auth error: ${e.message}"),
-                                  ),
-                                );
-                              } catch (e) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text("Error: $e")),
-                                );
-                              }
-                            },
-                            child: const Text("Add Patient"),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              );
-            },
+                const SizedBox(height: 12),
+                _buildTextField(
+                  lastNameController,
+                  "Last Name",
+                  icon: Icons.person_3_outlined,
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildTextField(
+                        birthdayController,
+                        "Birthday (MM/DD/YYYY)",
+                        icon: Icons.calendar_today_outlined,
+                        keyboardType: TextInputType.datetime,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildTextField(
+                        phoneController,
+                        "Phone Number",
+                        icon: Icons.phone_outlined,
+                        keyboardType: TextInputType.phone,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                _buildTextField(
+                  emailController,
+                  "Email",
+                  keyboardType: TextInputType.emailAddress,
+                  icon: Icons.email_outlined,
+                ),
+                const SizedBox(height: 12),
+                _buildTextField(
+                  addressController,
+                  "Address",
+                  icon: Icons.home_outlined,
+                ),
+                const SizedBox(height: 12),
+
+                // 🩺 Health Condition
+                _buildTextField(
+                  healthConditionController,
+                  "Health Condition",
+                  icon: Icons.health_and_safety_outlined,
+                ),
+                const SizedBox(height: 12),
+
+                // 👨‍⚕️ Assign Doctor Dropdown
+                FutureBuilder<QuerySnapshot>(
+                  future:
+                      FirebaseFirestore.instance
+                          .collection('doctor_inCharge')
+                          .where('centerId', isEqualTo: widget.centerId)
+                          .get(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      );
+                    }
+                    if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                      return const Text(
+                        "No doctors available for this center.",
+                        style: TextStyle(color: Colors.black54),
+                      );
+                    }
+                    final doctors = snapshot.data!.docs;
+                    return DropdownButtonFormField<String>(
+                      decoration: InputDecoration(
+                        labelText: "Assign Doctor",
+                        prefixIcon: const Icon(Icons.medical_services_outlined),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        filled: true,
+                        fillColor: Colors.grey[100],
+                      ),
+                      value: selectedDoctorId,
+                      items:
+                          doctors.map((doc) {
+                            final data = doc.data() as Map<String, dynamic>;
+                            return DropdownMenuItem<String>(
+                              value: doc.id,
+                              child: Text(data['name'] ?? 'Unnamed Doctor'),
+                            );
+                          }).toList(),
+                      onChanged: (value) {
+                        selectedDoctorId = value;
+                      },
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 24),
+
+                // 🧩 Action Buttons
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton.icon(
+                      icon: const Icon(Icons.close, color: Colors.black54),
+                      label: const Text(
+                        "Cancel",
+                        style: TextStyle(color: Colors.black54, fontSize: 16),
+                      ),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                    const SizedBox(width: 10),
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.check_circle, color: Colors.white),
+                      label: const Text(
+                        "Add Patient",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        elevation: 3,
+                      ),
+                      onPressed: () async {
+                        final firstName = firstNameController.text.trim();
+                        final middleName = middleNameController.text.trim();
+                        final lastName = lastNameController.text.trim();
+                        final birthday = birthdayController.text.trim();
+                        final phone = phoneController.text.trim();
+                        final email = emailController.text.trim();
+                        final address = addressController.text.trim();
+                        final healthCondition =
+                            healthConditionController.text.trim();
+
+                        if (firstName.isEmpty ||
+                            lastName.isEmpty ||
+                            birthday.isEmpty ||
+                            phone.isEmpty ||
+                            address.isEmpty ||
+                            selectedDoctorId == null) {
+                          _showSnack("Please fill in all required fields");
+                          return;
+                        }
+
+                        try {
+                          await FirebaseFirestore.instance
+                              .collection('patients')
+                              .add({
+                                'firstName': firstName,
+                                'middleName': middleName,
+                                'lastName': lastName,
+                                'birthday': birthday,
+                                'phone': phone,
+                                'email': email,
+                                'address': address,
+                                'healthCondition': healthCondition,
+                                'assignedDoctorId': selectedDoctorId,
+                                'centerId': widget.centerId,
+                                'createdAt': FieldValue.serverTimestamp(),
+                              });
+
+                          Navigator.pop(context);
+                          _showSnack(
+                            "Patient added successfully",
+                            success: true,
+                          );
+                        } catch (e) {
+                          _showSnack("Error: $e");
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         );
       },
+    );
+  }
+
+  // 🧩 Helper function
+  Widget _buildTextField(
+    TextEditingController controller,
+    String label, {
+    bool obscureText = false,
+    TextInputType? keyboardType,
+    IconData? icon,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: TextField(
+        controller: controller,
+        obscureText: obscureText,
+        keyboardType: keyboardType,
+        decoration: InputDecoration(
+          prefixIcon:
+              icon != null
+                  ? Icon(icon, color: primaryColor)
+                  : const Icon(Icons.circle, color: Colors.transparent),
+          labelText: label,
+          filled: true,
+          fillColor: Colors.grey.shade50,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: primaryColor, width: 2),
+          ),
+        ),
+      ),
     );
   }
 
@@ -705,6 +547,17 @@ class _PatientListScreenState extends State<PatientListScreen> {
           },
         );
       },
+    );
+  }
+
+  void _showSnack(String message, {bool success = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message, style: const TextStyle(fontSize: 16)),
+        backgroundColor: success ? Colors.green : Colors.redAccent,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+      ),
     );
   }
 
