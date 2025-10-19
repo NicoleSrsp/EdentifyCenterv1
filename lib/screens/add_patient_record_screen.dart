@@ -652,13 +652,19 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
     TextEditingController controller, {
     IconData? icon,
     TextInputType keyboard = TextInputType.number,
+    bool readOnly = false,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: TextFormField(
         controller: controller,
         keyboardType: keyboard,
-        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+        readOnly: readOnly,
+        style: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+          color: readOnly ? Colors.grey.shade500 : Colors.black,
+        ),
         decoration: InputDecoration(
           prefixIcon:
               icon != null
@@ -668,41 +674,38 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
                       color: Colors.teal.shade50,
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Icon(icon, color: Colors.teal.shade700, size: 22),
+                    child: Icon(
+                      icon,
+                      color: readOnly ? Colors.grey : Colors.teal.shade700,
+                      size: 22,
+                    ),
                   )
                   : null,
           labelText: label,
           labelStyle: TextStyle(
-            color: Colors.grey.shade700,
+            color: readOnly ? Colors.grey : Colors.grey.shade700,
             fontSize: 15,
             fontWeight: FontWeight.w500,
           ),
-          floatingLabelStyle: TextStyle(
-            color: Colors.teal.shade800,
-            fontWeight: FontWeight.w700,
-            fontSize: 16,
-          ),
           filled: true,
-          fillColor: Colors.white,
+          fillColor: readOnly ? Colors.grey.shade100 : Colors.white,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 18,
             vertical: 16,
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide(color: Colors.teal.shade700, width: 1.5),
+            borderSide: BorderSide(
+              color: readOnly ? Colors.grey.shade400 : Colors.teal.shade700,
+              width: 1.5,
+            ),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide(color: Colors.teal.shade700, width: 2),
-          ),
-          focusedErrorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide(color: Colors.red.shade400, width: 1.5),
-          ),
-          errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide(color: Colors.red.shade200, width: 1.5),
+            borderSide: BorderSide(
+              color: readOnly ? Colors.grey.shade400 : Colors.teal.shade700,
+              width: 2,
+            ),
           ),
         ),
       ),
@@ -882,6 +885,7 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
                                         child: _buildTextField(
                                           "Post-Weight (kg)",
                                           _postWeightController,
+                                          readOnly: _sessionType == "pre",
                                         ),
                                       ),
                                       SizedBox(
@@ -902,6 +906,7 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
                                         child: _buildTextField(
                                           "UF Removed (L)",
                                           _ufRemovedController,
+                                          readOnly: _sessionType == "pre",
                                         ),
                                       ),
                                     ],
