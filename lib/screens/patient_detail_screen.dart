@@ -748,67 +748,164 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
       context: context,
       barrierDismissible: false,
       builder: (context) {
-        return AlertDialog(
-          title: const Text("Nurse Verification"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(labelText: "Select Nurse"),
-                items:
-                    nurseList.map((nurse) {
-                      return DropdownMenuItem<String>(
-                        value: nurse['id'] as String?,
-                        child: Text(nurse['name'] ?? (nurse['id'] as String)),
-                      );
-                    }).toList(),
-                onChanged: (value) => selectedNurseId = value,
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: pinController,
-                obscureText: true,
-                decoration: const InputDecoration(labelText: "Enter PIN"),
-              ),
-            ],
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
           ),
-          actions: [
-            TextButton(
-              child: const Text("Cancel"),
-              onPressed: () => Navigator.pop(context, null),
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            constraints: const BoxConstraints(maxWidth: 350),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 15,
+                  offset: const Offset(0, 6),
+                ),
+              ],
             ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.teal.shade700, // ✅ Button background
-                foregroundColor: Colors.white, // ✅ Text (font) color
-              ),
-              child: const Text("Verify"),
-              onPressed: () async {
-                if (selectedNurseId == null || pinController.text.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("Please select nurse and enter PIN"),
-                    ),
-                  );
-                  return;
-                }
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.lock_outline_rounded,
+                  color: Colors.teal.shade700,
+                  size: 52,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Nurse Verification',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.teal.shade900,
+                  ),
+                ),
+                const SizedBox(height: 16),
 
-                final nurseDoc = await nursesRef.doc(selectedNurseId).get();
-                if (nurseDoc.exists &&
-                    nurseDoc['pin'] == pinController.text.trim()) {
-                  Navigator.pop(context, {
-                    'nurseId': selectedNurseId,
-                    'nurseName': nurseDoc['name'],
-                  });
-                  return;
-                } else {
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(const SnackBar(content: Text("Invalid PIN")));
-                }
-              },
+                DropdownButtonFormField<String>(
+                  decoration: InputDecoration(
+                    labelText: "Select Nurse",
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 14,
+                    ),
+                  ),
+                  items:
+                      nurseList.map((nurse) {
+                        return DropdownMenuItem<String>(
+                          value: nurse['id'] as String?,
+                          child: Text(nurse['name'] ?? (nurse['id'] as String)),
+                        );
+                      }).toList(),
+                  onChanged: (value) => selectedNurseId = value,
+                ),
+
+                const SizedBox(height: 12),
+
+                TextField(
+                  controller: pinController,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: "Enter PIN",
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 14,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    OutlinedButton(
+                      onPressed: () => Navigator.pop(context, null),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(
+                          color: Colors.teal.shade700,
+                          width: 1.5,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 14,
+                        ),
+                      ),
+                      child: Text(
+                        'Cancel',
+                        style: TextStyle(
+                          color: Colors.teal.shade700,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.teal.shade700,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 14,
+                        ),
+                      ),
+                      onPressed: () async {
+                        if (selectedNurseId == null ||
+                            pinController.text.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                "Please select nurse and enter PIN.",
+                              ),
+                            ),
+                          );
+                          return;
+                        }
+
+                        final nurseDoc =
+                            await nursesRef.doc(selectedNurseId).get();
+                        if (nurseDoc.exists &&
+                            nurseDoc['pin'] == pinController.text.trim()) {
+                          Navigator.pop(context, {
+                            'nurseId': selectedNurseId,
+                            'nurseName': nurseDoc['name'],
+                          });
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("Invalid PIN.")),
+                          );
+                        }
+                      },
+                      child: const Text(
+                        'Verify',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-          ],
+          ),
         );
       },
     );
