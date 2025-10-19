@@ -280,11 +280,13 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                                                 ),
                                               ),
                                               title: Text(
-                                                "Date: ${record['date'] ?? doc.id}",
+                                                "Date: ${record['date'] ?? doc.id} "
+                                                "(${(record['sessionType'] ?? 'pre').toString().toUpperCase()}-Dialysis)",
                                                 style: const TextStyle(
                                                   fontWeight: FontWeight.bold,
                                                 ),
                                               ),
+
                                               subtitle: Column(
                                                 crossAxisAlignment:
                                                     CrossAxisAlignment.start,
@@ -412,6 +414,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
     showDialog(
       context: context,
       builder: (context) {
+        String sessionType = record['sessionType'] ?? 'pre';
         return Dialog(
           insetPadding: const EdgeInsets.all(24),
           shape: RoundedRectangleBorder(
@@ -594,6 +597,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                         'updatedAt': FieldValue.serverTimestamp(),
                         'updatedBy': _verifiedNurse?['nurseName'],
                         'nurseName': nurseInfo['nurseName'],
+                        'sessionType': sessionType,
                       };
 
                       await FirebaseFirestore.instance

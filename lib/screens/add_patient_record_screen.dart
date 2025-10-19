@@ -36,6 +36,7 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
 
   // 🔹 Store nurse info after verification
   Map<String, dynamic>? _verifiedNurse;
+  String _sessionType = "pre"; // default
 
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
@@ -135,6 +136,17 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
   }
 
   Future<void> _saveRecord() async {
+    if (_preWeightController.text.isEmpty &&
+        _postWeightController.text.isEmpty &&
+        _bpController.text.isEmpty &&
+        _pulseController.text.isEmpty &&
+        _tempController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill in at least one field.')),
+      );
+      return;
+    }
+
     // 🧩 Require nurse verification first
     if (_verifiedNurse == null) {
       final nurseInfo = await _showNurseVerificationDialog();
@@ -143,6 +155,8 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
     }
 
     final Map<String, dynamic> record = {};
+
+    record["sessionType"] = _sessionType;
 
     void addIfNotEmpty(
       String key,
@@ -168,7 +182,9 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
     addIfNotEmpty("respiration", _respirationController, isNumber: true);
     addIfNotEmpty("oxygenSaturation", _o2Controller, isNumber: true);
 
-    record["date"] = _selectedDate.toIso8601String().split("T").first;
+    final dateString = DateFormat('yyyy-MM-dd').format(_selectedDate);
+    record["date"] = dateString;
+
     record["createdAt"] = FieldValue.serverTimestamp();
 
     // 🧩 Include nurse info
@@ -179,10 +195,34 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
         .collection("users")
         .doc(widget.patientId)
         .collection("records")
-        .doc(_selectedDate.toIso8601String().split("T").first);
+        .doc("${dateString}_${_sessionType}");
 
     final existingRecord = await recordRef.get();
     final isUpdate = existingRecord.exists;
+
+    if (isUpdate) {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder:
+            (_) => AlertDialog(
+              title: const Text('Record Already Exists'),
+              content: const Text(
+                'A record for this date already exists. Do you want to update it?',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Update'),
+                ),
+              ],
+            ),
+      );
+      if (confirm != true) return; // cancel
+    }
 
     await recordRef.set(record, SetOptions(merge: true));
 
@@ -484,6 +524,50 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
                             ),
                           ),
                           const SizedBox(height: 20),
+                          const SizedBox(height: 10),
+                          Card(
+                            elevation: 2,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: DropdownButtonFormField<String>(
+                                value: _sessionType,
+                                decoration: InputDecoration(
+                                  labelText: "Session Type",
+                                  labelStyle: TextStyle(
+                                    color: Colors.grey.shade700,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: BorderSide(
+                                      color: Colors.teal.shade700,
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                ),
+                                items: const [
+                                  DropdownMenuItem(
+                                    value: "pre",
+                                    child: Text("Pre-Dialysis"),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: "post",
+                                    child: Text("Post-Dialysis"),
+                                  ),
+                                ],
+                                onChanged: (value) {
+                                  setState(() {
+                                    _sessionType = value!;
+                                  });
+                                },
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+
                           _buildSectionHeader(
                             "Dialysis Information",
                             Icons.local_hospital,

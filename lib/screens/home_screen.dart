@@ -999,7 +999,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                                                 .trim()
                                                             : '';
 
-                                                    // 🔎 Try to find the real userId from "users" collection
+                                                    // 🔎 Find real userId in "users" collection
                                                     final userQuery =
                                                         await FirebaseFirestore
                                                             .instance
@@ -1031,7 +1031,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                                       );
                                                     } else {
                                                       realUserId =
-                                                          schedulePatientId; // fallback if not found
+                                                          schedulePatientId; // fallback
                                                       print(
                                                         "⚠️ No user found by name, using schedule ID: $realUserId",
                                                       );
@@ -1041,27 +1041,46 @@ class _HomeScreenState extends State<HomeScreen> {
                                                       "🔗 Real userId used: $realUserId",
                                                     );
 
-                                                    // 🔍 Check if today's record exists
-                                                    final recordRef =
+                                                    // 🧾 FIXED 🔍 Check if today's record (e.g. 2025-10-19_pre) exists
+                                                    final recordsCollection =
                                                         FirebaseFirestore
                                                             .instance
                                                             .collection('users')
                                                             .doc(realUserId)
                                                             .collection(
                                                               'records',
+                                                            );
+
+                                                    final querySnap =
+                                                        await recordsCollection
+                                                            .where(
+                                                              FieldPath
+                                                                  .documentId,
+                                                              isGreaterThanOrEqualTo:
+                                                                  todayKey,
                                                             )
-                                                            .doc(todayKey);
+                                                            .where(
+                                                              FieldPath
+                                                                  .documentId,
+                                                              isLessThan:
+                                                                  '${todayKey}_z',
+                                                            )
+                                                            .get();
 
-                                                    final recordSnap =
-                                                        await recordRef.get();
                                                     final hasTodayRecord =
-                                                        recordSnap.exists;
+                                                        querySnap
+                                                            .docs
+                                                            .isNotEmpty;
+                                                    final existingRecordId =
+                                                        hasTodayRecord
+                                                            ? querySnap
+                                                                .docs
+                                                                .first
+                                                                .id
+                                                            : null;
 
                                                     print(
-                                                      "🧾 Record exists? $hasTodayRecord",
-                                                    );
-                                                    print(
-                                                      "🧾 Record data: ${recordSnap.data()}",
+                                                      "🧾 Found today's record? $hasTodayRecord (id: $existingRecordId)",
                                                     );
 
                                                     if (!context.mounted)
