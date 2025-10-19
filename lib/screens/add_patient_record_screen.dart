@@ -147,6 +147,44 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
       return;
     }
 
+    // 🟡 Ask user to confirm session type before proceeding
+    final confirmSession = await showDialog<bool>(
+      context: context,
+      builder:
+          (_) => AlertDialog(
+            title: const Text('Confirm Session Type'),
+            content: Text(
+              'You selected "${_sessionType == "pre" ? "Pre-Dialysis" : "Post-Dialysis"}".\n\n'
+              'Do you want to continue with this session type?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Change'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.teal.shade700,
+                ),
+                child: const Text('Yes, Continue'),
+              ),
+            ],
+          ),
+    );
+
+    if (confirmSession != true) {
+      // user wants to change — just return to let them adjust the dropdown
+      return;
+    }
+
+    // 🧩 Require nurse verification first
+    if (_verifiedNurse == null) {
+      final nurseInfo = await _showNurseVerificationDialog();
+      if (nurseInfo == null) return; // cancelled
+      setState(() => _verifiedNurse = nurseInfo);
+    }
+
     // 🧩 Require nurse verification first
     if (_verifiedNurse == null) {
       final nurseInfo = await _showNurseVerificationDialog();
