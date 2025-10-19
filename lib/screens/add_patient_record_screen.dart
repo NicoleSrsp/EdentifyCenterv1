@@ -231,14 +231,17 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
       String title;
       String message;
 
+      final sessionLabel =
+          _sessionType == 'pre' ? 'pre-dialysis' : 'post-dialysis';
+
       if (!isUpdate) {
-        title = "New Dialysis Record Added";
+        title = "New ${sessionLabel.capitalize()} Record Added";
         message =
-            "Nurse ${_verifiedNurse?['nurseName'] ?? ''} added your dialysis record for ${DateFormat('MMM dd, yyyy').format(_selectedDate)}.";
+            "Nurse ${_verifiedNurse?['nurseName'] ?? ''} added your $sessionLabel record for ${DateFormat('MMM dd, yyyy').format(_selectedDate)}.";
       } else {
-        title = "Dialysis Record Updated";
+        title = "${sessionLabel.capitalize()} Record Updated";
         message =
-            "Nurse ${_verifiedNurse?['nurseName'] ?? ''} updated your dialysis record for ${DateFormat('MMM dd, yyyy').format(_selectedDate)}.";
+            "Nurse ${_verifiedNurse?['nurseName'] ?? ''} updated your $sessionLabel record for ${DateFormat('MMM dd, yyyy').format(_selectedDate)}.";
       }
 
       await FirebaseFirestore.instance
@@ -250,12 +253,9 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
             'message': message,
             'createdAt': FieldValue.serverTimestamp(),
             'read': false,
-            'type': 'treatment_record', // 🧩 Added field for navigation
-            'recordDate':
-                _selectedDate
-                    .toIso8601String()
-                    .split('T')
-                    .first, // 🧩 yyyy-MM-dd
+            'type': 'treatment_record',
+            'recordDate': _selectedDate.toIso8601String().split('T').first,
+            'sessionType': _sessionType, // ✅ include in Firestore too
           });
 
       debugPrint("✅ Notification added for user ${widget.patientId}");
@@ -743,4 +743,10 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
       ),
     );
   }
+}
+
+// 🔹 String extension for capitalization (used in notifications)
+extension StringCasingExtension on String {
+  String capitalize() =>
+      isEmpty ? this : '${this[0].toUpperCase()}${substring(1)}';
 }

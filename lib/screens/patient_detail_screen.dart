@@ -607,6 +607,39 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                           .doc(recordId)
                           .update(updatedData);
 
+                      // 🔹 Add notification for updated record
+                      final patientDoc =
+                          await FirebaseFirestore.instance
+                              .collection('users')
+                              .doc(patientId)
+                              .get();
+
+                      final patientData = patientDoc.data() ?? {};
+                      final patientName =
+                          "${patientData['firstName'] ?? ''} ${patientData['lastName'] ?? ''}"
+                              .trim();
+
+                      final sessionLabel =
+                          sessionType == 'post'
+                              ? 'Post-Dialysis'
+                              : 'Pre-Dialysis';
+
+                      // 🔹 Create notification in patient's notifications collection
+                      await FirebaseFirestore.instance
+                          .collection('users')
+                          .doc(patientId)
+                          .collection('notifications')
+                          .add({
+                            'title': '$sessionLabel Record Updated',
+                            'message':
+                                'Nurse ${nurseInfo['nurseName']} updated your $sessionLabel record for ${DateFormat('MMM d, yyyy').format(DateTime.now())}.',
+                            'sessionType': sessionType, // ✅ identifies pre/post
+                            'createdAt':
+                                FieldValue.serverTimestamp(), // ✅ matches realtime_notifications.dart
+                            'read':
+                                false, // ✅ matches realtime_notifications.dart
+                          });
+
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
