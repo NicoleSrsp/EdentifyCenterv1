@@ -48,6 +48,38 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
     if (picked != null) setState(() => _selectedDate = picked);
   }
 
+  Future<void> _loadPreDialysisData() async {
+    try {
+      final userRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(
+            widget.patientId,
+          ) // make sure this matches your patient ID variable
+          .collection('records')
+          .doc("${DateFormat('yyyy-MM-dd').format(_selectedDate)}_pre");
+
+      final snapshot = await userRef.get();
+
+      if (snapshot.exists) {
+        final data = snapshot.data()!;
+        setState(() {
+          _preWeightController.text = data['preWeight']?.toString() ?? '';
+          _ufGoalController.text = data['ufGoal']?.toString() ?? '';
+          _bpController.text = data['bloodPressure']?.toString() ?? '';
+          _tempController.text = data['temperature']?.toString() ?? '';
+          _pulseController.text = data['pulseRate']?.toString() ?? '';
+          _respirationController.text = data['respiration']?.toString() ?? '';
+          _o2Controller.text =
+              data['oxygenSaturation']?.toString() ?? ''; // ✅ added line
+        });
+      } else {
+        debugPrint("⚠️ No pre-dialysis record found for this date.");
+      }
+    } catch (e) {
+      debugPrint("Error loading pre-dialysis data: $e");
+    }
+  }
+
   // 🔹 Show nurse verification dialog
   Future<Map<String, dynamic>?> _showNurseVerificationDialog() async {
     final TextEditingController pinController = TextEditingController();
@@ -836,10 +868,24 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
                                     child: Text("Post-Dialysis"),
                                   ),
                                 ],
-                                onChanged: (value) {
+                                onChanged: (value) async {
                                   setState(() {
                                     _sessionType = value!;
                                   });
+
+                                  if (_sessionType == "post") {
+                                    await _loadPreDialysisData();
+                                  } else {
+                                    // Clear fields when switching back to pre
+                                    setState(() {
+                                      _preWeightController.clear();
+                                      _ufGoalController.clear();
+                                      _bpController.clear();
+                                      _tempController.clear();
+                                      _pulseController.clear();
+                                      _respirationController.clear();
+                                    });
+                                  }
                                 },
                               ),
                             ),
