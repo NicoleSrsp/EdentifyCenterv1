@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../services/auth_service.dart'; 
+import '../services/auth_service.dart';
 import 'nurses_screen.dart';
 
 class SideMenu extends StatelessWidget {
@@ -27,29 +27,33 @@ class SideMenu extends StatelessWidget {
     VoidCallback? onTapOverride,
   }) {
     return ListTile(
-      leading: Icon(icon, color: Colors.white),
+      // ✅ Added padding for better alignment and spacing
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 4.0),
+      leading: Icon(icon, color: Colors.white, size: 24), // Set explicit size
       title: Text(
         title,
         style: TextStyle(
           color: Colors.white,
+          fontSize: 16, // Set explicit font size
           fontWeight: selected ? FontWeight.bold : FontWeight.normal,
         ),
       ),
       tileColor: selected ? primaryColor : darkerPrimaryColor,
+      // Added a subtle highlight for the selected item
+      shape: selected
+          ? const Border(left: BorderSide(color: Colors.white, width: 3.0))
+          : null,
       onTap: () async {
         if (onTapOverride != null) {
           onTapOverride();
           return;
         }
 
-        // ✅ STEP 2: Simplify the logout logic to a single line.
         if (routeName == '/logout') {
-          // All the complex dialog and navigation logic is now handled by the service.
           AuthService.logout(context);
           return;
         }
 
-        // --- All other navigation logic remains the same ---
         if (routeName == '/aboutCenter') {
           final doc = await FirebaseFirestore.instance
               .collection('centers')
@@ -68,7 +72,7 @@ class SideMenu extends StatelessWidget {
               'address': data['address'] ?? '',
               'contactNumber': data['contactNumber'] ?? '',
               'missionVision': data['missionVision'] ?? '',
-              'logoAsset': data['logoAsset'] ?? 'assets/logo.png',
+              'logoAsset': data['logoAsset'] ?? 'assets/D.png',
             },
           );
         } else {
@@ -87,53 +91,99 @@ class SideMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Get bottom padding for safe area (for notches, home bars, etc.)
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+
     return Container(
       width: 250,
       color: darkerPrimaryColor,
+      // ✅ Changed main Column structure
       child: Column(
+        // This ensures the main items are at the top, and logout is at the bottom
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header remains the same...
-          InkWell(
-            onTap: () {
-              Navigator.pushReplacementNamed(
-                context,
-                '/home',
-                arguments: {'centerId': centerId, 'centerName': centerName},
-              );
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              child: Row(
-                children: [
-                  SizedBox(width: 60, height: 40, child: Image.asset('assets/logo.png', fit: BoxFit.contain)),
-                  const SizedBox(width: 12),
-                  const Text('Edentify', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
-                  const SizedBox(width: 12),
-                  const VerticalDivider(color: Colors.white, thickness: 1, width: 20)
-                ],
-              ),
+          // ✅ This Expanded widget takes up all available space,
+          // pushing the logout button to the bottom.
+          Expanded(
+            child: Column(
+              children: [
+                // --- HEADER ---
+                InkWell(
+                  onTap: () {
+                    Navigator.pushReplacementNamed(
+                      context,
+                      '/home',
+                      arguments: {
+                        'centerId': centerId,
+                        'centerName': centerName
+                      },
+                    );
+                  },
+                  child: Container(
+                    // ✅ Adjusted padding to align logo with menu items below
+                    padding: const EdgeInsets.fromLTRB(24, 24, 16, 16),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center, // Vertically center
+                      children: [
+                        SizedBox(
+                          width: 40, // Made logo container square
+                          height: 40,
+                          child: Image.asset('assets/D.png', fit: BoxFit.contain),
+                        ),
+                        const SizedBox(width: 16),
+                        const Text(
+                          'Edentify',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        // ✅ Removed the VerticalDivider for a cleaner look
+                      ],
+                    ),
+                  ),
+                ),
+                const Divider(color: Colors.white24, height: 1), // Subtle divider
+
+                // --- TOP MENU ITEMS ---
+                _buildMenuItem(context: context, icon: Icons.home, title: 'Home', selected: selectedMenu == 'Home', routeName: '/home'),
+                _buildMenuItem(context: context, icon: Icons.people, title: 'Patients', selected: selectedMenu == 'Patients', routeName: '/patients'),
+                _buildMenuItem(context: context, icon: Icons.medical_services, title: 'Doctors', selected: selectedMenu == 'Doctors', routeName: '/doctors'),
+                _buildMenuItem(
+                  context: context,
+                  icon: Icons.vaccines,
+                  title: 'Nurses',
+                  selected: selectedMenu == 'Nurses',
+                  routeName: '/nurses',
+                  onTapOverride: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (context) => NursesScreen(centerId: centerId, centerName: centerName)),
+                    );
+                  },
+                ),
+                _buildMenuItem(context: context, icon: Icons.info, title: 'About Center', selected: selectedMenu == 'About Center', routeName: '/aboutCenter'),
+              ],
             ),
           ),
 
-          // Menu items remain the same...
-          _buildMenuItem(context: context, icon: Icons.home, title: 'Home', selected: selectedMenu == 'Home', routeName: '/home'),
-          _buildMenuItem(context: context, icon: Icons.people, title: 'Patients', selected: selectedMenu == 'Patients', routeName: '/patients'),
-          _buildMenuItem(context: context, icon: Icons.medical_services, title: 'Doctors', selected: selectedMenu == 'Doctors', routeName: '/doctors'),
-          _buildMenuItem(
-            context: context,
-            icon: Icons.vaccines,
-            title: 'Nurses',
-            selected: selectedMenu == 'Nurses',
-            routeName: '/nurses',
-            onTapOverride: () {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => NursesScreen(centerId: centerId, centerName: centerName)),
-              );
-            },
+          // --- LOGOUT BUTTON AT THE BOTTOM ---
+          // This is now outside the Expanded widget
+          Column(
+            children: [
+              const Divider(color: Colors.white24, height: 1), // Divider above logout
+              _buildMenuItem(
+                context: context,
+                icon: Icons.logout,
+                title: 'Log Out',
+                selected: selectedMenu == 'Logout',
+                routeName: '/logout',
+              ),
+              // ✅ Add padding at the very bottom for the phone's safe area
+              SizedBox(height: bottomPadding > 0 ? bottomPadding : 16),
+            ],
           ),
-          _buildMenuItem(context: context, icon: Icons.info, title: 'About Center', selected: selectedMenu == 'About Center', routeName: '/aboutCenter'),
-          _buildMenuItem(context: context, icon: Icons.logout, title: 'Logout', selected: selectedMenu == 'Logout', routeName: '/logout'),
         ],
       ),
     );
