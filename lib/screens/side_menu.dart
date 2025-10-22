@@ -95,7 +95,7 @@ class SideMenu extends StatelessWidget {
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 
     return Container(
-      width: 250,
+      width: 200,
       color: darkerPrimaryColor,
       // ✅ Changed main Column structure
       child: Column(

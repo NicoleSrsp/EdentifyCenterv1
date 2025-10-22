@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
-// Import the screens you need to navigate to
-import '../patient/patient_detail_screen.dart';
 import '../patient/add_patient_record_screen.dart';
 
 /// A dedicated widget to display the weekly patient schedule table.
@@ -29,6 +26,32 @@ class ScheduleCard extends StatelessWidget {
     required this.onDeleteSchedule,
   });
 
+  // ✅ 1. NEW HELPER FUNCTION to format names
+  /// Formats "LastName, FirstName MiddleName" into "LastName, F. M."
+  String _formatPatientName(String fullName) {
+    if (fullName.isEmpty) return 'N/A';
+
+    try {
+      final parts = fullName.split(',');
+      if (parts.length < 2) return fullName; // Not in expected format
+
+      final lastName = parts[0].trim();
+      final firstAndMiddleNames = parts[1].trim().split(' ');
+
+      String initials = '';
+      for (var name in firstAndMiddleNames) {
+        if (name.isNotEmpty) {
+          initials += '${name[0].toUpperCase()}. ';
+        }
+      }
+
+      return '$lastName, ${initials.trim()}';
+    } catch (e) {
+      // Fallback in case of unexpected name format
+      return fullName;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -42,7 +65,7 @@ class ScheduleCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. LARGER WEEK TITLE
+            // ... (Week title is unchanged)
             Text(
               "Week: $weekRange",
               style: GoogleFonts.roboto(
@@ -53,7 +76,6 @@ class ScheduleCard extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Table(
-              // 2. REMOVED all borders
               columnWidths: {
                 0: const IntrinsicColumnWidth(),
                 ...Map.fromIterable(
@@ -69,10 +91,14 @@ class ScheduleCard extends StatelessWidget {
                     color: Colors.grey.shade100,
                   ),
                   children: [
-                    // 3. STYLED TABLE HEADER
-                    _buildStyledHeader('Shift/Day'),
+                    _buildStyledHeader('Shift/Day',
+                        align: TextAlign.center), // Center shift
                     ...weekDays.map(
-                      (d) => _buildStyledHeader(DateFormat('EEE\ndd').format(d)),
+                      (d) => _buildStyledHeader(
+                        DateFormat('EEE\ndd').format(d),
+                        // ✅ 2. ALIGNMENT FIXED: Left-align date headers
+                        align: TextAlign.left,
+                      ),
                     ),
                   ],
                 ),
@@ -82,7 +108,6 @@ class ScheduleCard extends StatelessWidget {
                   return TableRow(
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      // 4. SHIFT SEPARATION
                       border: Border(
                         top: BorderSide(
                           color: index == 0
@@ -93,12 +118,12 @@ class ScheduleCard extends StatelessWidget {
                       ),
                     ),
                     children: [
-                      // 5. STYLED SHIFT CELL
+                      // ... (Shift cell is unchanged)
                       Padding(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 16),
                         child: Text(
-                          s, // "1st Shift", "2nd Shift"
+                          s,
                           textAlign: TextAlign.center,
                           style: GoogleFonts.roboto(
                             fontWeight: FontWeight.bold,
@@ -113,7 +138,7 @@ class ScheduleCard extends StatelessWidget {
                         final patients = table[s]?[key] ?? [];
 
                         if (patients.isEmpty) {
-                          // 6. STYLED EMPTY CELL
+                          // ... (Empty cell is unchanged)
                           return Padding(
                             padding: const EdgeInsets.all(8.0),
                             child: Text(
@@ -128,14 +153,17 @@ class ScheduleCard extends StatelessWidget {
                         }
 
                         return Padding(
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 4, horizontal: 8),
+                          // ✅ 3. ALIGNMENT: Added left padding to align with header
+                          padding: const EdgeInsets.fromLTRB(12, 4, 8, 4),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: patients.map((p) {
                               final isDoneByDay = Map<String, dynamic>.from(
                                   p['isDoneByDay'] ?? {});
                               final isDone = isDoneByDay[key] == true;
+                              // ✅ 4. NAME FORMATTED: Use the new helper
+                              final formattedName =
+                                  _formatPatientName(p['name'] ?? '');
 
                               return Row(
                                 mainAxisAlignment:
@@ -150,22 +178,17 @@ class ScheduleCard extends StatelessWidget {
                                         onTap: isDone
                                             ? null
                                             : () async {
+                                                // ... (All your onTap logic is unchanged)
                                                 try {
-                                                  // ✅ 1. GET TODAY'S DATE (for comparison)
                                                   final now = DateTime.now();
                                                   final today = DateTime(
                                                       now.year,
                                                       now.month,
                                                       now.day);
-
-                                                  // ✅ 2. GET CLICKED DATE
-                                                  // 'd' is the date for the column
                                                   final clickedDate = DateTime(
                                                       d.year, d.month, d.day);
                                                   final isToday = clickedDate
                                                       .isAtSameMomentAs(today);
-
-                                                  // ✅ 3. USE CLICKED DATE FOR KEYS
                                                   final clickedDateKey =
                                                       DateFormat('yyyy-MM-dd')
                                                           .format(clickedDate);
@@ -193,7 +216,6 @@ class ScheduleCard extends StatelessWidget {
                                                     return;
                                                   }
 
-                                                  // ... (find realUserId logic is unchanged)
                                                   final nameParts =
                                                       schedulePatientName
                                                           .split(',');
@@ -228,7 +250,7 @@ class ScheduleCard extends StatelessWidget {
                                                         userQuery.docs.first.id;
                                                   } else {
                                                     realUserId =
-                                                        schedulePatientId; // fallback
+                                                        schedulePatientId;
                                                   }
 
                                                   final recordsCollection =
@@ -239,7 +261,6 @@ class ScheduleCard extends StatelessWidget {
                                                             'records',
                                                           );
 
-                                                  // ✅ 4. CHECK FOR RECORDS ON CLICKED DATE
                                                   final preDoc =
                                                       await recordsCollection
                                                           .doc(
@@ -258,7 +279,6 @@ class ScheduleCard extends StatelessWidget {
 
                                                   if (!context.mounted) return;
 
-                                                  // ✅ 5. NEW SMARTER DIALOG LOGIC
                                                   String title =
                                                       'Dialysis Record Action';
                                                   String content;
@@ -267,27 +287,23 @@ class ScheduleCard extends StatelessWidget {
 
                                                   if (preRecordExists &&
                                                       postRecordExists) {
-                                                    // --- CASE 1: Both records exist ---
                                                     title = 'Records Complete';
                                                     content =
                                                         'Both pre and post-dialysis records already exist for $schedulePatientName on $clickedDateFormatted.';
                                                     confirmText = 'OK';
                                                     canAddRecord = false;
                                                   } else if (preRecordExists) {
-                                                    // --- CASE 2: Pre exists, ask for post ---
                                                     content =
                                                         'A pre-dialysis record exists for $schedulePatientName on $clickedDateFormatted. Add post-dialysis data?';
                                                     confirmText =
                                                         'Add Post-Dialysis';
                                                   } else {
-                                                    // --- CASE 3: No records exist ---
                                                     content =
                                                         'No dialysis record found for $schedulePatientName on $clickedDateFormatted. Add a new record?';
                                                     confirmText =
                                                         'Add New Record';
                                                   }
 
-                                                  // ✅ 6. ADD WARNING IF NOT TODAY
                                                   if (!isToday &&
                                                       canAddRecord) {
                                                     content =
@@ -325,7 +341,6 @@ class ScheduleCard extends StatelessWidget {
                                                             'Cancel',
                                                           ),
                                                         ),
-                                                        // Only show the "Confirm" button if they can add a record
                                                         if (canAddRecord)
                                                           FilledButton(
                                                             onPressed: () {
@@ -351,7 +366,6 @@ class ScheduleCard extends StatelessWidget {
                                                                 confirmText),
                                                           )
                                                         else
-                                                          // Show a simple "OK" button if records are complete
                                                           FilledButton(
                                                             onPressed: () =>
                                                                 Navigator.pop(
@@ -381,7 +395,8 @@ class ScheduleCard extends StatelessWidget {
                                               const EdgeInsets.symmetric(
                                                   vertical: 6.0),
                                           child: Text(
-                                            p['name'] ?? '',
+                                            // ✅ 5. USE FORMATTED NAME
+                                            formattedName,
                                             style: GoogleFonts.roboto(
                                               fontSize: 14,
                                               decoration: isDone
@@ -395,12 +410,15 @@ class ScheduleCard extends StatelessWidget {
                                                   ? FontWeight.normal
                                                   : FontWeight.w500,
                                             ),
+                                            // ✅ 6. PREVENT WRAPPING
                                             overflow: TextOverflow.ellipsis,
+                                            softWrap: false,
                                           ),
                                         ),
                                       ),
                                     ),
                                   ),
+                                  // ... (IconButton row is unchanged)
                                   Row(
                                     children: [
                                       IconButton(
@@ -475,13 +493,14 @@ class ScheduleCard extends StatelessWidget {
     );
   }
 
-  // 8. HELPER WIDGET for the styled header
-  Widget _buildStyledHeader(String text) {
+  // ✅ 7. UPDATED HELPER WIDGET
+  Widget _buildStyledHeader(String text, {TextAlign align = TextAlign.center}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+      // ✅ Added horizontal padding for left-aligned headers
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       child: Text(
         text,
-        textAlign: TextAlign.center,
+        textAlign: align, // Use the provided alignment
         style: GoogleFonts.roboto(
           fontWeight: FontWeight.w600,
           fontSize: 13,

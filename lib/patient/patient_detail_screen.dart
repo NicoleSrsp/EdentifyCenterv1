@@ -41,10 +41,11 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
             child: Container(
               color: Colors.grey.shade100,
               child: FutureBuilder<DocumentSnapshot>(
-                future: FirebaseFirestore.instance
-                    .collection('users')
-                    .doc(widget.patientId)
-                    .get(),
+                future:
+                    FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(widget.patientId)
+                        .get(),
                 builder: (context, snapshot) {
                   // ... (Your FutureBuilder for patient info is unchanged)
                   if (snapshot.connectionState == ConnectionState.waiting) {
@@ -95,15 +96,49 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                CircleAvatar(
-                                  radius: 45,
-                                  backgroundImage: data['profilePicUrl'] != null
-                                      ? NetworkImage(data['profilePicUrl'])
-                                      : const AssetImage(
-                                              'assets/images/default_avatar.png',
-                                            )
-                                          as ImageProvider,
+                                // --- START OF CHANGES ---
+                                Builder(
+                                  builder: (context) {
+                                    // 1. Get the URL and the first initial
+                                    final String? profileUrl =
+                                        data['profileImageUrl'];
+                                    final String initial =
+                                        fullName.isNotEmpty
+                                            ? fullName[0].toUpperCase()
+                                            : '?';
+
+                                    return CircleAvatar(
+                                      radius: 45,
+                                      // 2. Set the background color for the initial
+                                      // This will be overridden by the image if it exists
+                                      backgroundColor: Colors.teal.shade100,
+
+                                      // 3. Set the background image
+                                      // If the URL is valid, this NetworkImage will be used
+                                      backgroundImage:
+                                          (profileUrl != null &&
+                                                  profileUrl.isNotEmpty)
+                                              ? NetworkImage(profileUrl)
+                                              : null, // No image if URL is null or empty
+                                      // 4. Set the child
+                                      // This will ONLY display if backgroundImage is null
+                                      child:
+                                          (profileUrl == null ||
+                                                  profileUrl.isEmpty)
+                                              ? Text(
+                                                initial,
+                                                style: TextStyle(
+                                                  fontSize: 40,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.teal.shade800,
+                                                ),
+                                              )
+                                              : null, // No child if an image is being shown
+                                    );
+                                  },
                                 ),
+
+                                // --- END OF CHANGES ---
                                 const SizedBox(width: 20),
                                 Expanded(
                                   child: Column(
@@ -147,13 +182,12 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
+
                       // ... (Your Sort By and Add Record Row are unchanged)
                       Padding(
-                        padding:
-                            const EdgeInsets.symmetric(horizontal: 16),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Row(
-                          mainAxisAlignment:
-                              MainAxisAlignment.spaceBetween,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Row(
                               children: [
@@ -187,18 +221,14 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: SideMenu.primaryColor,
                                 shape: RoundedRectangleBorder(
-                                  borderRadius:
-                                      BorderRadius.circular(30),
+                                  borderRadius: BorderRadius.circular(30),
                                 ),
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 20,
                                   vertical: 12,
                                 ),
                               ),
-                              icon: const Icon(
-                                Icons.add,
-                                color: Colors.white,
-                              ),
+                              icon: const Icon(Icons.add, color: Colors.white),
                               label: const Text(
                                 "Add Record",
                                 style: TextStyle(color: Colors.white),
@@ -207,12 +237,12 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (_) =>
-                                        AddPatientRecordScreen(
-                                      patientId: widget.patientId,
-                                      centerId: widget.centerId,
-                                      centerName: widget.centerName,
-                                    ),
+                                    builder:
+                                        (_) => AddPatientRecordScreen(
+                                          patientId: widget.patientId,
+                                          centerId: widget.centerId,
+                                          centerName: widget.centerName,
+                                        ),
                                   ),
                                 );
                               },
@@ -236,8 +266,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                                 child: CircularProgressIndicator(),
                               );
                             }
-                            if (!snapshot.hasData ||
-                                snapshot.data!.isEmpty) {
+                            if (!snapshot.hasData || snapshot.data!.isEmpty) {
                               return const Center(
                                 child: Text("No records yet"),
                               );
@@ -265,8 +294,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                                     leading: Container(
                                       decoration: BoxDecoration(
                                         color: Colors.teal.shade100,
-                                        borderRadius:
-                                            BorderRadius.circular(8),
+                                        borderRadius: BorderRadius.circular(8),
                                       ),
                                       padding: const EdgeInsets.all(8),
                                       child: const Icon(
@@ -276,8 +304,9 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                                     ),
                                     title: Text(
                                       // Format the date nicely
-                                      DateFormat('MMMM dd, yyyy')
-                                          .format(DateTime.parse(record.date)),
+                                      DateFormat(
+                                        'MMMM dd, yyyy',
+                                      ).format(DateTime.parse(record.date)),
                                       style: const TextStyle(
                                         fontWeight: FontWeight.bold,
                                       ),
@@ -292,12 +321,13 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                                           title: 'Pre-Dialysis Record',
                                           nurseName:
                                               preData['nurseName'] ?? 'N/A',
-                                          onEdit: () => _showEditRecordDialog(
-                                            context,
-                                            widget.patientId,
-                                            record.preDocId!,
-                                            preData,
-                                          ),
+                                          onEdit:
+                                              () => _showEditRecordDialog(
+                                                context,
+                                                widget.patientId,
+                                                record.preDocId!,
+                                                preData,
+                                              ),
                                         ),
                                       // --- Child 2: Post-Dialysis Record ---
                                       if (postData != null)
@@ -305,12 +335,13 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                                           title: 'Post-Dialysis Record',
                                           nurseName:
                                               postData['nurseName'] ?? 'N/A',
-                                          onEdit: () => _showEditRecordDialog(
-                                            context,
-                                            widget.patientId,
-                                            record.postDocId!,
-                                            postData,
-                                          ),
+                                          onEdit:
+                                              () => _showEditRecordDialog(
+                                                context,
+                                                widget.patientId,
+                                                record.postDocId!,
+                                                postData,
+                                              ),
                                         ),
                                     ],
                                   ),
@@ -606,19 +637,21 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                           .update(updatedData);
 
                       // 🔹 Add notification for updated record
-                      final patientDoc = await FirebaseFirestore.instance
-                          .collection('users')
-                          .doc(patientId)
-                          .get();
+                      final patientDoc =
+                          await FirebaseFirestore.instance
+                              .collection('users')
+                              .doc(patientId)
+                              .get();
 
                       final patientData = patientDoc.data() ?? {};
                       final patientName =
                           "${patientData['firstName'] ?? ''} ${patientData['lastName'] ?? ''}"
                               .trim();
 
-                      final sessionLabel = sessionType == 'post'
-                          ? 'Post-Dialysis'
-                          : 'Pre-Dialysis';
+                      final sessionLabel =
+                          sessionType == 'post'
+                              ? 'Post-Dialysis'
+                              : 'Pre-Dialysis';
 
                       // 🔹 Create notification in patient's notifications collection
                       await FirebaseFirestore.instance
@@ -626,15 +659,15 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                           .doc(patientId)
                           .collection('notifications')
                           .add({
-                        'title': '$sessionLabel Record Updated',
-                        'message':
-                            'Nurse ${nurseInfo['nurseName']} updated your $sessionLabel record for ${DateFormat('MMM d, yyyy').format(DateTime.now())}.',
-                        'sessionType': sessionType, // ✅ identifies pre/post
-                        'createdAt': FieldValue
-                            .serverTimestamp(), // ✅ matches realtime_notifications.dart
-                        'read':
-                            false, // ✅ matches realtime_notifications.dart
-                      });
+                            'title': '$sessionLabel Record Updated',
+                            'message':
+                                'Nurse ${nurseInfo['nurseName']} updated your $sessionLabel record for ${DateFormat('MMM d, yyyy').format(DateTime.now())}.',
+                            'sessionType': sessionType, // ✅ identifies pre/post
+                            'createdAt':
+                                FieldValue.serverTimestamp(), // ✅ matches realtime_notifications.dart
+                            'read':
+                                false, // ✅ matches realtime_notifications.dart
+                          });
 
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -792,12 +825,13 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                       vertical: 14,
                     ),
                   ),
-                  items: nurseList.map((nurse) {
-                    return DropdownMenuItem<String>(
-                      value: nurse['id'] as String?,
-                      child: Text(nurse['name'] ?? (nurse['id'] as String)),
-                    );
-                  }).toList(),
+                  items:
+                      nurseList.map((nurse) {
+                        return DropdownMenuItem<String>(
+                          value: nurse['id'] as String?,
+                          child: Text(nurse['name'] ?? (nurse['id'] as String)),
+                        );
+                      }).toList(),
                   onChanged: (value) => selectedNurseId = value,
                 ),
 
