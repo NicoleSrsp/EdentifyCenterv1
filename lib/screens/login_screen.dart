@@ -7,7 +7,11 @@ class CenterLoginScreen extends StatefulWidget {
   final String centerName;
   final String centerId;
 
-  const CenterLoginScreen({super.key, required this.centerName, required this.centerId});
+  const CenterLoginScreen({
+    super.key,
+    required this.centerName,
+    required this.centerId,
+  });
 
   @override
   State<CenterLoginScreen> createState() => _CenterLoginScreenState();
@@ -18,6 +22,7 @@ class _CenterLoginScreenState extends State<CenterLoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
+  // State variables
   bool _isLoading = false;
   bool _obscurePassword = true;
   String _errorText = '';
@@ -28,33 +33,69 @@ class _CenterLoginScreenState extends State<CenterLoginScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchCenterName();
-    _checkCurrentUser();
+    // Use a single initialization function to prevent race conditions.
+    _initializeScreen();
   }
 
+  /// Handles the screen's initial setup to avoid race conditions between
+  /// fetching data and checking the current user's auth state.
+  Future<void> _initializeScreen() async {
+    // 1. Fetch the center name first, as it's needed later.
+    await _fetchCenterName();
+
+    // 2. IMPORTANT: After an async gap, check if the widget is still mounted
+    //    before proceeding to avoid calling setState on a disposed widget.
+    if (!mounted) return;
+
+    // 3. Now that the center name is available, check for a persistent login.
+    await _checkCurrentUser();
+  }
+
+  /// Fetches the center's name from Firestore to display on the UI.
   Future<void> _fetchCenterName() async {
-    final doc = await FirebaseFirestore.instance
-        .collection('centers')
-        .doc(widget.centerId)
-        .get();
-    if (doc.exists) {
+    try {
+      final doc =
+          await FirebaseFirestore.instance
+              .collection('centers')
+              .doc(widget.centerId)
+              .get();
+
+      if (doc.exists) {
+        setState(() {
+          _centerName =
+              (doc.data() as Map<String, dynamic>)['name'] ?? widget.centerName;
+        });
+      } else {
+        setState(() {
+          _centerName = widget.centerName; // Fallback to initial name
+        });
+      }
+    } catch (e) {
+      // If fetching fails, use the name passed to the widget as a fallback.
       setState(() {
-        _centerName = (doc.data() as Map<String, dynamic>)['name'] ?? '';
+        _centerName = widget.centerName;
+        _errorText = "Could not verify center name.";
       });
     }
   }
 
-  // Persistent login check
+  /// Checks if a user is already signed in. If so, navigates them to the home screen.
   Future<void> _checkCurrentUser() async {
     User? user = FirebaseAuth.instance.currentUser;
     if (user != null) {
+      // User is already logged in, proceed to home screen.
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('centerId', widget.centerId);
       await prefs.setString('centerName', _centerName);
 
-      Navigator.pushReplacementNamed(
+      // Another mounted check is crucial before navigation.
+      if (!mounted) return;
+
+      Navigator.pushNamedAndRemoveUntil(
         context,
         '/home',
+        (Route<dynamic> route) =>
+            false, // This predicate removes all previous routes
         arguments: {'centerId': widget.centerId, 'centerName': _centerName},
       );
     }
@@ -67,7 +108,9 @@ class _CenterLoginScreenState extends State<CenterLoginScreen> {
     super.dispose();
   }
 
+  /// Handles the user login logic.
   Future<void> _login() async {
+    // Don't proceed if the form is invalid or the account is locked.
     if (!_formKey.currentState!.validate() || _accountLocked) return;
 
     setState(() {
@@ -76,50 +119,57 @@ class _CenterLoginScreenState extends State<CenterLoginScreen> {
     });
 
     try {
-      final docRef = FirebaseFirestore.instance.collection('centers').doc(widget.centerId);
+      // Step 1: Get the center's data from Firestore first.
+      final docRef = FirebaseFirestore.instance
+          .collection('centers')
+          .doc(widget.centerId);
       final doc = await docRef.get();
 
       if (!doc.exists) {
-        throw FirebaseAuthException(
-          code: 'user-not-found',
-          message: 'No center account found.',
-        );
+        throw Exception('No center account found for this ID.');
       }
 
       final userData = doc.data() as Map<String, dynamic>;
       final isFirstLogin = userData['isFirstLogin'] ?? true;
       final isLocked = userData['isLocked'] ?? false;
 
-      if (isLocked || _loginAttempts >= 3) {
-        await _lockAccount(widget.centerId);
-        throw FirebaseAuthException(
-            code: 'account-locked',
-            message: 'Account locked. Contact administrator.');
+      // Step 2: Check if the account is locked from the database.
+      if (isLocked) {
+        setState(() => _accountLocked = true);
+        throw Exception('Account locked. Please contact an administrator.');
       }
 
+      // Step 3: Attempt to sign in with Firebase Auth.
       try {
         await FirebaseAuth.instance.signInWithEmailAndPassword(
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
         );
-      } on FirebaseAuthException catch (e) {
-        if (e.code == 'user-not-found') {
-          await FirebaseAuth.instance.createUserWithEmailAndPassword(
-            email: _emailController.text.trim(),
-            password: _passwordController.text.trim(),
-          );
-        } else {
-          throw e;
+      } on FirebaseAuthException {
+        // --- CRITICAL SECURITY FIX ---
+        // DO NOT create a new user if sign-in fails. Treat any auth error
+        // as a failed login attempt. This prevents malicious account creation.
+        _loginAttempts++;
+        if (_loginAttempts >= 3) {
+          setState(() => _accountLocked = true);
+          // NOTE: This is client-side locking. A user can bypass this by
+          // restarting the app. For true security, this logic should be
+          // handled server-side (e.g., Cloud Functions).
+          await _lockAccountInFirestore(widget.centerId);
         }
+        throw Exception('Invalid email or password.');
       }
 
+      // Step 4: Login successful. Reset attempts and save session data.
       _loginAttempts = 0;
 
-      // Save center info for persistent login
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('centerId', widget.centerId);
       await prefs.setString('centerName', _centerName);
 
+      if (!mounted) return;
+
+      // Step 5: Navigate to the appropriate screen.
       if (isFirstLogin) {
         Navigator.pushReplacementNamed(
           context,
@@ -127,32 +177,35 @@ class _CenterLoginScreenState extends State<CenterLoginScreen> {
           arguments: {'centerId': widget.centerId, 'centerName': _centerName},
         );
       } else {
-        Navigator.pushReplacementNamed(
+        Navigator.pushNamedAndRemoveUntil(
           context,
           '/home',
+          (Route<dynamic> route) => false,
           arguments: {'centerId': widget.centerId, 'centerName': _centerName},
         );
       }
-    } on FirebaseAuthException catch (e) {
-      _loginAttempts++;
-      setState(() {
-        _errorText = e.message ?? 'Login failed';
-        if (_loginAttempts >= 3) _accountLocked = true;
-      });
     } catch (e) {
+      // Generic catch block to display any errors from the process.
       setState(() {
-        _errorText = 'Login failed: $e';
+        _errorText = e.toString().replaceFirst('Exception: ', '');
       });
     } finally {
+      // Ensure the loading indicator is always turned off.
       setState(() => _isLoading = false);
     }
   }
 
-  Future<void> _lockAccount(String centerId) async {
-    await FirebaseFirestore.instance
-        .collection('centers')
-        .doc(centerId)
-        .update({'isLocked': true, 'lockedAt': FieldValue.serverTimestamp()});
+  /// Updates the lock status in Firestore.
+  Future<void> _lockAccountInFirestore(String centerId) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('centers')
+          .doc(centerId)
+          .update({'isLocked': true, 'lockedAt': FieldValue.serverTimestamp()});
+    } catch (e) {
+      // Silently fail or log error. Don't let this block the user.
+      debugPrint("Failed to lock account in Firestore: $e");
+    }
   }
 
   @override
@@ -174,9 +227,12 @@ class _CenterLoginScreenState extends State<CenterLoginScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        _centerName.isEmpty ? "Logging in..." : "Logging into: $_centerName",
+                        _centerName.isEmpty
+                            ? "Loading Center..."
+                            : "Log in to $_centerName",
+                        textAlign: TextAlign.center,
                         style: const TextStyle(
-                          fontSize: 18,
+                          fontSize: 22,
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
                         ),
@@ -188,15 +244,21 @@ class _CenterLoginScreenState extends State<CenterLoginScreen> {
                           labelText: 'Email',
                           prefixIcon: const Icon(Icons.email),
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor: Colors.white.withOpacity(0.9),
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
                           ),
                         ),
                         keyboardType: TextInputType.emailAddress,
                         validator: (value) {
-                          if (value == null || value.isEmpty) return 'Please enter your email';
-                          if (!value.contains('@')) return 'Enter a valid email';
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter your email';
+                          }
+                          final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
+                          if (!emailRegex.hasMatch(value)) {
+                            return 'Please enter a valid email address';
+                          }
                           return null;
                         },
                       ),
@@ -209,7 +271,9 @@ class _CenterLoginScreenState extends State<CenterLoginScreen> {
                           prefixIcon: const Icon(Icons.lock),
                           suffixIcon: IconButton(
                             icon: Icon(
-                              _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                              _obscurePassword
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
                             ),
                             onPressed: () {
                               setState(() {
@@ -218,14 +282,19 @@ class _CenterLoginScreenState extends State<CenterLoginScreen> {
                             },
                           ),
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor: Colors.white.withOpacity(0.9),
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
                           ),
                         ),
                         validator: (value) {
-                          if (value == null || value.isEmpty) return 'Please enter your password';
-                          if (value.length < 6) return 'Password must be at least 6 characters';
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter your password';
+                          }
+                          if (value.length < 6) {
+                            return 'Password must be at least 6 characters';
+                          }
                           return null;
                         },
                       ),
@@ -235,17 +304,23 @@ class _CenterLoginScreenState extends State<CenterLoginScreen> {
                           child: Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: Colors.red[900]?.withOpacity(0.8),
-                              borderRadius: BorderRadius.circular(8),
+                              color: Colors.red[800]?.withOpacity(0.9),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                             child: Row(
                               children: [
-                                const Icon(Icons.error_outline, color: Colors.white),
-                                const SizedBox(width: 8),
+                                const Icon(
+                                  Icons.error_outline,
+                                  color: Colors.white,
+                                ),
+                                const SizedBox(width: 10),
                                 Expanded(
                                   child: Text(
                                     _errorText,
-                                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -258,26 +333,36 @@ class _CenterLoginScreenState extends State<CenterLoginScreen> {
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
-                            backgroundColor: _accountLocked ? Colors.grey : Colors.white,
-                            foregroundColor: Colors.black,
+                            backgroundColor:
+                                _accountLocked
+                                    ? Colors.grey[600]
+                                    : Colors.blue.shade800,
+                            foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          onPressed: _accountLocked ? null : _login,
-                          child: _isLoading
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.black,
+                          onPressed:
+                              _accountLocked || _isLoading ? null : _login,
+                          child:
+                              _isLoading
+                                  ? const SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 3,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                  : Text(
+                                    _accountLocked
+                                        ? 'ACCOUNT LOCKED'
+                                        : 'LOG IN',
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
-                                )
-                              : const Text(
-                                  'LOG IN',
-                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                                ),
                         ),
                       ),
                     ],

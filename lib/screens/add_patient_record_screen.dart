@@ -843,7 +843,7 @@ class _AddPatientRecordScreenState extends State<AddPatientRecordScreen> {
                             child: Padding(
                               padding: const EdgeInsets.all(16),
                               child: DropdownButtonFormField<String>(
-                                value: _sessionType,
+                                initialValue: _sessionType,
                                 decoration: InputDecoration(
                                   labelText: "Session Type",
                                   labelStyle: TextStyle(

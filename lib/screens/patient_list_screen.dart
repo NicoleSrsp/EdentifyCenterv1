@@ -192,7 +192,7 @@ class _PatientListScreenState extends State<PatientListScreen> {
                         filled: true,
                         fillColor: Colors.grey[100],
                       ),
-                      value: selectedDoctorId,
+                      initialValue: selectedDoctorId,
                       items:
                           doctors.map((doc) {
                             final data = doc.data() as Map<String, dynamic>;

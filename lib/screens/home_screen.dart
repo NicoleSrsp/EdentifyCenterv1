@@ -224,7 +224,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   // 🩺 Nurse Dropdown
                   DropdownButtonFormField<String>(
-                    value: selectedNurseId,
+                    initialValue: selectedNurseId,
                     decoration: const InputDecoration(
                       labelText: 'Select Nurse',
                       border: OutlineInputBorder(),
@@ -440,7 +440,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
-                          value: frequency,
+                          initialValue: frequency,
                           decoration: InputDecoration(
                             labelText: 'Frequency',
                             border: OutlineInputBorder(
@@ -552,7 +552,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ],
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
-                          value: selectedShift,
+                          initialValue: selectedShift,
                           decoration: InputDecoration(
                             labelText: 'Shift',
                             border: OutlineInputBorder(
