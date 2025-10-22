@@ -190,7 +190,7 @@ class _NursesScreenState extends State<NursesScreen> {
                 Container(
                   color: const Color(0xFF045347),
                   padding: const EdgeInsets.symmetric(
-                    vertical: 16,
+                    vertical: 20,
                     horizontal: 24,
                   ),
                   child: Row(

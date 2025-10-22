@@ -581,7 +581,7 @@ class _PatientListScreenState extends State<PatientListScreen> {
                   color: darkerPrimaryColor,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 24,
-                    vertical: 16,
+                    vertical: 20,
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,

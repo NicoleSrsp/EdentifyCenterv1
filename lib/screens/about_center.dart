@@ -36,7 +36,7 @@ class AboutScreen extends StatelessWidget {
                 Container(
                   color: const Color(0xFF045347),
                   padding:
-                      const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                      const EdgeInsets.symmetric(vertical: 24, horizontal: 24),
                   width: double.infinity,
                   child: Row(
                     children: [
