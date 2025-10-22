@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'add_patient_record_screen.dart';
-import 'side_menu.dart';
+import '../screens/side_menu.dart';
+
+// ✅ 1. Import the new service and data model
+import '../services/record_service.dart';
 
 class PatientDetailScreen extends StatefulWidget {
   final String patientId;
@@ -38,20 +41,18 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
             child: Container(
               color: Colors.grey.shade100,
               child: FutureBuilder<DocumentSnapshot>(
-                future:
-                    FirebaseFirestore.instance
-                        .collection('users')
-                        .doc(widget.patientId)
-                        .get(),
+                future: FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(widget.patientId)
+                    .get(),
                 builder: (context, snapshot) {
+                  // ... (Your FutureBuilder for patient info is unchanged)
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
                   }
-
                   if (!snapshot.hasData || !snapshot.data!.exists) {
                     return const Center(child: Text("Patient not found."));
                   }
-
                   final data = snapshot.data!.data() as Map<String, dynamic>;
                   final fullName =
                       "${data['firstName'] ?? ''} ${data['lastName'] ?? ''}";
@@ -59,6 +60,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // ... (Your Header and Patient Info Card are unchanged)
                       Container(
                         color: const Color(0xFF045347),
                         padding: const EdgeInsets.symmetric(
@@ -95,13 +97,12 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                               children: [
                                 CircleAvatar(
                                   radius: 45,
-                                  backgroundImage:
-                                      data['profilePicUrl'] != null
-                                          ? NetworkImage(data['profilePicUrl'])
-                                          : const AssetImage(
-                                                'assets/images/default_avatar.png',
-                                              )
-                                              as ImageProvider,
+                                  backgroundImage: data['profilePicUrl'] != null
+                                      ? NetworkImage(data['profilePicUrl'])
+                                      : const AssetImage(
+                                              'assets/images/default_avatar.png',
+                                            )
+                                          as ImageProvider,
                                 ),
                                 const SizedBox(width: 20),
                                 Expanded(
@@ -146,208 +147,177 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      Expanded(
-                        child: Column(
+                      // ... (Your Sort By and Add Record Row are unchanged)
+                      Padding(
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 16),
+                        child: Row(
+                          mainAxisAlignment:
+                              MainAxisAlignment.spaceBetween,
                           children: [
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                              ),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Row(
-                                    children: [
-                                      const Text(
-                                        "Sort by:",
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      DropdownButton<String>(
-                                        value: _sortOrder,
-                                        items: const [
-                                          DropdownMenuItem(
-                                            value: "desc",
-                                            child: Text("Newest First"),
-                                          ),
-                                          DropdownMenuItem(
-                                            value: "asc",
-                                            child: Text("Oldest First"),
-                                          ),
-                                        ],
-                                        onChanged: (value) {
-                                          setState(() => _sortOrder = value!);
-                                        },
-                                      ),
-                                    ],
+                            Row(
+                              children: [
+                                const Text(
+                                  "Sort by:",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
                                   ),
-                                  ElevatedButton.icon(
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: SideMenu.primaryColor,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(30),
-                                      ),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 20,
-                                        vertical: 12,
-                                      ),
+                                ),
+                                const SizedBox(width: 8),
+                                DropdownButton<String>(
+                                  value: _sortOrder,
+                                  items: const [
+                                    DropdownMenuItem(
+                                      value: "desc",
+                                      child: Text("Newest First"),
                                     ),
-                                    icon: const Icon(
-                                      Icons.add,
-                                      color: Colors.white,
+                                    DropdownMenuItem(
+                                      value: "asc",
+                                      child: Text("Oldest First"),
                                     ),
-                                    label: const Text(
-                                      "Add Record",
-                                      style: TextStyle(color: Colors.white),
-                                    ),
-                                    onPressed: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder:
-                                              (_) => AddPatientRecordScreen(
-                                                patientId: widget.patientId,
-                                                centerId: widget.centerId,
-                                                centerName: widget.centerName,
-                                              ),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ],
-                              ),
+                                  ],
+                                  onChanged: (value) {
+                                    setState(() => _sortOrder = value!);
+                                  },
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 8),
-                            Expanded(
-                              child: StreamBuilder<QuerySnapshot>(
-                                stream:
-                                    FirebaseFirestore.instance
-                                        .collection("users")
-                                        .doc(widget.patientId)
-                                        .collection("records")
-                                        .orderBy(
-                                          "createdAt",
-                                          descending: _sortOrder == "desc",
-                                        )
-                                        .snapshots(),
-                                builder: (context, snapshot) {
-                                  if (snapshot.connectionState ==
-                                      ConnectionState.waiting) {
-                                    return const Center(
-                                      child: CircularProgressIndicator(),
-                                    );
-                                  }
-                                  if (!snapshot.hasData ||
-                                      snapshot.data!.docs.isEmpty) {
-                                    return const Center(
-                                      child: Text("No records yet"),
-                                    );
-                                  }
-
-                                  return ListView(
-                                    padding: const EdgeInsets.all(16),
-                                    children:
-                                        snapshot.data!.docs.map((doc) {
-                                          final record =
-                                              doc.data()
-                                                  as Map<String, dynamic>;
-                                          return Card(
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                            ),
-                                            elevation: 3,
-                                            margin: const EdgeInsets.only(
-                                              bottom: 12,
-                                            ),
-                                            child: ListTile(
-                                              leading: Container(
-                                                decoration: BoxDecoration(
-                                                  color: Colors.teal.shade100,
-                                                  borderRadius:
-                                                      BorderRadius.circular(8),
-                                                ),
-                                                padding: const EdgeInsets.all(
-                                                  8,
-                                                ),
-                                                child: const Icon(
-                                                  Icons.folder,
-                                                  color: Colors.teal,
-                                                ),
-                                              ),
-                                              title: Text(
-                                                "Date: ${record['date'] ?? doc.id} "
-                                                "(${(record['sessionType'] ?? 'pre').toString().toUpperCase()}-Dialysis)",
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-
-                                              subtitle: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  Text(
-                                                    "Pre-Weight: ${record['preWeight'] ?? ''} | Post-Weight: ${record['postWeight'] ?? ''}",
-                                                  ),
-                                                  const SizedBox(height: 4),
-                                                  if (record['updatedBy'] !=
-                                                          null &&
-                                                      record['updatedBy']
-                                                          .toString()
-                                                          .isNotEmpty)
-                                                    Text(
-                                                      "Updated by Nurse ${record['updatedBy']}",
-                                                      style: const TextStyle(
-                                                        fontSize: 13,
-                                                        color: Colors.orange,
-                                                        fontStyle:
-                                                            FontStyle.italic,
-                                                      ),
-                                                    )
-                                                  else if (record['nurseName'] !=
-                                                          null &&
-                                                      record['nurseName']
-                                                          .toString()
-                                                          .isNotEmpty)
-                                                    Text(
-                                                      "Added by Nurse ${record['nurseName']}",
-                                                      style: const TextStyle(
-                                                        fontSize: 13,
-                                                        color: Colors.grey,
-                                                        fontStyle:
-                                                            FontStyle.italic,
-                                                      ),
-                                                    ),
-                                                ],
-                                              ),
-                                              trailing: IconButton(
-                                                icon: const Icon(
-                                                  Icons.edit,
-                                                  color: Colors.teal,
-                                                ),
-                                                tooltip: 'Edit Record',
-                                                onPressed: () {
-                                                  _showEditRecordDialog(
-                                                    context,
-                                                    widget.patientId,
-                                                    doc.id,
-                                                    record,
-                                                  );
-                                                },
-                                              ),
-                                            ),
-                                          );
-                                        }).toList(),
-                                  );
-                                },
+                            ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: SideMenu.primaryColor,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius:
+                                      BorderRadius.circular(30),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 12,
+                                ),
                               ),
+                              icon: const Icon(
+                                Icons.add,
+                                color: Colors.white,
+                              ),
+                              label: const Text(
+                                "Add Record",
+                                style: TextStyle(color: Colors.white),
+                              ),
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        AddPatientRecordScreen(
+                                      patientId: widget.patientId,
+                                      centerId: widget.centerId,
+                                      centerName: widget.centerName,
+                                    ),
+                                  ),
+                                );
+                              },
                             ),
                           ],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Expanded(
+                        // ✅ 2. Use the new StreamBuilder
+                        child: StreamBuilder<List<CombinedDialysisRecord>>(
+                          // ✅ 3. Call the new service
+                          stream: RecordService.streamCombinedRecords(
+                            patientId: widget.patientId,
+                            sortOrder: _sortOrder,
+                          ),
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState ==
+                                ConnectionState.waiting) {
+                              return const Center(
+                                child: CircularProgressIndicator(),
+                              );
+                            }
+                            if (!snapshot.hasData ||
+                                snapshot.data!.isEmpty) {
+                              return const Center(
+                                child: Text("No records yet"),
+                              );
+                            }
+
+                            // ✅ 4. We now have a clean list of combined records
+                            final combinedRecords = snapshot.data!;
+
+                            return ListView.builder(
+                              padding: const EdgeInsets.all(16),
+                              itemCount: combinedRecords.length,
+                              itemBuilder: (context, index) {
+                                final record = combinedRecords[index];
+                                final preData = record.preDialysisData;
+                                final postData = record.postDialysisData;
+
+                                // ✅ 5. Use an ExpansionTile as a "folder"
+                                return Card(
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  elevation: 3,
+                                  margin: const EdgeInsets.only(bottom: 12),
+                                  child: ExpansionTile(
+                                    leading: Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.teal.shade100,
+                                        borderRadius:
+                                            BorderRadius.circular(8),
+                                      ),
+                                      padding: const EdgeInsets.all(8),
+                                      child: const Icon(
+                                        Icons.folder_copy, // New icon
+                                        color: Colors.teal,
+                                      ),
+                                    ),
+                                    title: Text(
+                                      // Format the date nicely
+                                      DateFormat('MMMM dd, yyyy')
+                                          .format(DateTime.parse(record.date)),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    subtitle: Text(
+                                      "Pre-Weight: ${preData?['preWeight'] ?? 'N/A'} | Post-Weight: ${postData?['postWeight'] ?? 'N/A'}",
+                                    ),
+                                    children: [
+                                      // --- Child 1: Pre-Dialysis Record ---
+                                      if (preData != null)
+                                        _buildRecordSubTile(
+                                          title: 'Pre-Dialysis Record',
+                                          nurseName:
+                                              preData['nurseName'] ?? 'N/A',
+                                          onEdit: () => _showEditRecordDialog(
+                                            context,
+                                            widget.patientId,
+                                            record.preDocId!,
+                                            preData,
+                                          ),
+                                        ),
+                                      // --- Child 2: Post-Dialysis Record ---
+                                      if (postData != null)
+                                        _buildRecordSubTile(
+                                          title: 'Post-Dialysis Record',
+                                          nurseName:
+                                              postData['nurseName'] ?? 'N/A',
+                                          onEdit: () => _showEditRecordDialog(
+                                            context,
+                                            widget.patientId,
+                                            record.postDocId!,
+                                            postData,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            );
+                          },
                         ),
                       ),
                     ],
@@ -361,6 +331,34 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
     );
   }
 
+  // ✅ 6. New helper widget for the sub-tiles
+  Widget _buildRecordSubTile({
+    required String title,
+    required String nurseName,
+    required VoidCallback onEdit,
+  }) {
+    return ListTile(
+      visualDensity: VisualDensity.compact,
+      contentPadding: const EdgeInsets.only(left: 72, right: 16),
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
+      subtitle: Text(
+        "Added by Nurse $nurseName",
+        style: const TextStyle(
+          fontSize: 13,
+          color: Colors.grey,
+          fontStyle: FontStyle.italic,
+        ),
+      ),
+      trailing: IconButton(
+        icon: const Icon(Icons.edit, color: Colors.teal, size: 20),
+        tooltip: 'Edit Record',
+        onPressed: onEdit,
+      ),
+    );
+  }
+
+  // ... (Your _buildInfoRow, _showEditRecordDialog, _buildEditField,
+  //      and _promptNurseVerification functions are all unchanged)
   Widget _buildInfoRow(IconData icon, String label, String value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
@@ -608,21 +606,19 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                           .update(updatedData);
 
                       // 🔹 Add notification for updated record
-                      final patientDoc =
-                          await FirebaseFirestore.instance
-                              .collection('users')
-                              .doc(patientId)
-                              .get();
+                      final patientDoc = await FirebaseFirestore.instance
+                          .collection('users')
+                          .doc(patientId)
+                          .get();
 
                       final patientData = patientDoc.data() ?? {};
                       final patientName =
                           "${patientData['firstName'] ?? ''} ${patientData['lastName'] ?? ''}"
                               .trim();
 
-                      final sessionLabel =
-                          sessionType == 'post'
-                              ? 'Post-Dialysis'
-                              : 'Pre-Dialysis';
+                      final sessionLabel = sessionType == 'post'
+                          ? 'Post-Dialysis'
+                          : 'Pre-Dialysis';
 
                       // 🔹 Create notification in patient's notifications collection
                       await FirebaseFirestore.instance
@@ -630,15 +626,15 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                           .doc(patientId)
                           .collection('notifications')
                           .add({
-                            'title': '$sessionLabel Record Updated',
-                            'message':
-                                'Nurse ${nurseInfo['nurseName']} updated your $sessionLabel record for ${DateFormat('MMM d, yyyy').format(DateTime.now())}.',
-                            'sessionType': sessionType, // ✅ identifies pre/post
-                            'createdAt':
-                                FieldValue.serverTimestamp(), // ✅ matches realtime_notifications.dart
-                            'read':
-                                false, // ✅ matches realtime_notifications.dart
-                          });
+                        'title': '$sessionLabel Record Updated',
+                        'message':
+                            'Nurse ${nurseInfo['nurseName']} updated your $sessionLabel record for ${DateFormat('MMM d, yyyy').format(DateTime.now())}.',
+                        'sessionType': sessionType, // ✅ identifies pre/post
+                        'createdAt': FieldValue
+                            .serverTimestamp(), // ✅ matches realtime_notifications.dart
+                        'read':
+                            false, // ✅ matches realtime_notifications.dart
+                      });
 
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -729,8 +725,6 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
   }
 
   // ------------------- Nurse verification helper -------------------
-  // Fetches nurses under center, shows dialog (select nurse + enter PIN),
-  // returns a Map { 'nurseId': id, 'nurseName': name } if verified, otherwise null.
   Future<Map<String, dynamic>?> _promptNurseVerification() async {
     final nursesRef = FirebaseFirestore.instance
         .collection('centers')
@@ -798,13 +792,12 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                       vertical: 14,
                     ),
                   ),
-                  items:
-                      nurseList.map((nurse) {
-                        return DropdownMenuItem<String>(
-                          value: nurse['id'] as String?,
-                          child: Text(nurse['name'] ?? (nurse['id'] as String)),
-                        );
-                      }).toList(),
+                  items: nurseList.map((nurse) {
+                    return DropdownMenuItem<String>(
+                      value: nurse['id'] as String?,
+                      child: Text(nurse['name'] ?? (nurse['id'] as String)),
+                    );
+                  }).toList(),
                   onChanged: (value) => selectedNurseId = value,
                 ),
 

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-import 'side_menu.dart';
+import '../screens/side_menu.dart';
 
 class AddPatientRecordScreen extends StatefulWidget {
   final String patientId;

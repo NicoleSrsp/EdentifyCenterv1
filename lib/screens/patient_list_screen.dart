@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'side_menu.dart';
-import 'patient_detail_screen.dart';
+import '../patient/patient_detail_screen.dart';
 
 class PatientListScreen extends StatefulWidget {
   final String centerId;

@@ -1,10 +1,9 @@
-import 'package:edentifyweb/screens/add_patient_record_screen.dart';
-import 'package:edentifyweb/screens/patient_detail_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'side_menu.dart';
 import 'settings_screen.dart';
+import '../home/schedule_card.dart';
 
 class HomeScreen extends StatefulWidget {
   final String centerId;
@@ -125,25 +124,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
     if (picked != null) {
       setState(() => selectedDate = picked);
-    }
-  }
-
-  Future<void> _deleteSchedule(String scheduleId) async {
-    try {
-      await FirebaseFirestore.instance
-          .collection('centers')
-          .doc(widget.centerId)
-          .collection('schedules')
-          .doc(scheduleId)
-          .delete();
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Schedule deleted successfully.')),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to delete schedule: $e')));
     }
   }
 
@@ -803,508 +783,91 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // same logic, only better visual
-  Widget _buildWeeklyTable() {
-    final start = startOfWeek;
-    final end = endOfWeek;
+// same logic, only better visual
+Widget _buildWeeklyTable() {
+  final start = startOfWeek;
+  final end = endOfWeek;
 
-    return StreamBuilder<QuerySnapshot>(
-      stream:
-          FirebaseFirestore.instance
-              .collection('centers')
-              .doc(widget.centerId)
-              .collection('schedules')
-              .where(
-                'weekOf',
-                isGreaterThanOrEqualTo: Timestamp.fromDate(start),
-              )
-              .where('weekOf', isLessThanOrEqualTo: Timestamp.fromDate(end))
-              .snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
+  return StreamBuilder<QuerySnapshot>(
+    stream:
+        FirebaseFirestore.instance
+            .collection('centers')
+            .doc(widget.centerId)
+            .collection('schedules')
+            .where(
+              'weekOf',
+              isGreaterThanOrEqualTo: Timestamp.fromDate(start),
+            )
+            .where('weekOf', isLessThanOrEqualTo: Timestamp.fromDate(end))
+            .snapshots(),
+    builder: (context, snapshot) {
+      if (snapshot.connectionState == ConnectionState.waiting) {
+        return const Center(child: CircularProgressIndicator());
+      }
 
-        final weekDays = List<DateTime>.generate(
-          5,
-          (i) => start.add(Duration(days: i)),
+      // If there's an error, show a simple message widget
+      if (snapshot.hasError) {
+        return Center(
+          child: Text(
+            'Failed to load schedules.',
+            style: TextStyle(color: Colors.red.shade700),
+          ),
         );
+      }
 
-        Map<String, Map<String, List<Map<String, dynamic>>>> table = {
-          for (var s in shifts)
-            s: {for (var d in weekDays) DateFormat('yyyy-MM-dd').format(d): []},
-        };
+      final weekDays = List<DateTime>.generate(
+        5,
+        (i) => start.add(Duration(days: i)),
+      );
 
-        if (snapshot.hasData) {
-          for (var doc in snapshot.data!.docs) {
-            final data = doc.data() as Map<String, dynamic>;
-            final name = (data['patientName'] ?? '').toString();
-            final pShift = (data['shift'] ?? '').toString();
-            final pDays =
-                (data['days'] as List<dynamic>? ?? [])
-                    .map((e) => e.toString())
-                    .toList();
-            final isDoneByDay = Map<String, dynamic>.from(
-              data['isDoneByDay'] ?? {},
-            );
+      Map<String, Map<String, List<Map<String, dynamic>>>> table = {
+        for (var s in shifts)
+          s: {for (var d in weekDays) DateFormat('yyyy-MM-dd').format(d): []},
+      };
 
-            if (searchQuery.isNotEmpty &&
-                !name.toLowerCase().contains(searchQuery.toLowerCase())) {
-              continue;
-            }
+      if (snapshot.hasData) {
+        for (var doc in snapshot.data!.docs) {
+          final data = doc.data() as Map<String, dynamic>;
+          final name = (data['patientName'] ?? '').toString();
+          final pShift = (data['shift'] ?? '').toString();
+          final pDays =
+              (data['days'] as List<dynamic>? ?? []).map((e) => e.toString()).toList();
+          final isDoneByDay = Map<String, dynamic>.from(
+            data['isDoneByDay'] ?? {},
+          );
 
-            if (table.containsKey(pShift)) {
-              for (var d in pDays) {
-                if (table[pShift]?[d] != null) {
-                  table[pShift]?[d]?.add({
-                    'id': doc.id,
-                    'name': name,
-                    'isDoneByDay': isDoneByDay,
-                  });
-                }
+          if (searchQuery.isNotEmpty &&
+              !name.toLowerCase().contains(searchQuery.toLowerCase())) {
+            continue;
+          }
+
+          if (table.containsKey(pShift)) {
+            for (var d in pDays) {
+              if (table[pShift]?[d] != null) {
+                table[pShift]?[d]?.add({
+                  'id': doc.id,
+                  'name': name,
+                  'isDoneByDay': isDoneByDay,
+                });
               }
             }
           }
         }
+      }
 
-        return Card(
-          elevation: 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Week: $weekRange",
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Table(
-                    border: TableBorder.all(color: Colors.grey.shade300),
-                    defaultColumnWidth: const FixedColumnWidth(220),
-                    children: [
-                      TableRow(
-                        decoration: BoxDecoration(
-                          color: Colors.teal.shade100.withOpacity(0.4),
-                        ),
-                        children: [
-                          _tableHeader('Shift/Day'),
-                          ...weekDays.map(
-                            (d) =>
-                                _tableHeader(DateFormat('EEE\ndd').format(d)),
-                          ),
-                        ],
-                      ),
-                      ...shifts.map((s) {
-                        final index = shifts.indexOf(s);
-                        return TableRow(
-                          decoration: BoxDecoration(
-                            color:
-                                index.isEven
-                                    ? Colors.grey.shade50
-                                    : Colors.white,
-                          ),
-                          children: [
-                            _tableCell(
-                              s,
-                              isHeader: true,
-                              align: TextAlign.center,
-                            ),
-                            ...weekDays.map((d) {
-                              final key = DateFormat('yyyy-MM-dd').format(d);
-                              final patients = table[s]?[key] ?? [];
-
-                              if (patients.isEmpty) {
-                                return _tableCell('-');
-                              }
-
-                              return Padding(
-                                padding: const EdgeInsets.all(8),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children:
-                                      patients.map((p) {
-                                        final isDoneByDay =
-                                            Map<String, dynamic>.from(
-                                              p['isDoneByDay'] ?? {},
-                                            );
-                                        final isDone = isDoneByDay[key] == true;
-
-                                        return Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Expanded(
-                                              child: GestureDetector(
-                                                onTap: () async {
-                                                  try {
-                                                    final now = DateTime.now();
-                                                    final todayKey = DateFormat(
-                                                      'yyyy-MM-dd',
-                                                    ).format(
-                                                      DateTime(
-                                                        now.year,
-                                                        now.month,
-                                                        now.day,
-                                                      ),
-                                                    );
-
-                                                    // 🧩 Get patient data from the schedule document
-                                                    final schedulePatientId =
-                                                        p['id'] ?? '';
-                                                    final schedulePatientName =
-                                                        p['name'] ?? '';
-
-                                                    print(
-                                                      "🧠 Patient map contents: $p",
-                                                    );
-                                                    print(
-                                                      "👤 Tapped patient: $schedulePatientName",
-                                                    );
-                                                    print(
-                                                      "📄 Schedule patientId: $schedulePatientId",
-                                                    );
-
-                                                    if (schedulePatientName
-                                                        .isEmpty) {
-                                                      ScaffoldMessenger.of(
-                                                        context,
-                                                      ).showSnackBar(
-                                                        const SnackBar(
-                                                          content: Text(
-                                                            'Missing patient name.',
-                                                          ),
-                                                        ),
-                                                      );
-                                                      return;
-                                                    }
-
-                                                    // 🧩 Split "Reyes, Mika" into lastName = Reyes, firstName = Mika
-                                                    final nameParts =
-                                                        schedulePatientName
-                                                            .split(',');
-                                                    final lastName =
-                                                        nameParts.first.trim();
-                                                    final firstName =
-                                                        nameParts.length > 1
-                                                            ? nameParts[1]
-                                                                .trim()
-                                                            : '';
-
-                                                    // 🔎 Find real userId in "users" collection
-                                                    final userQuery =
-                                                        await FirebaseFirestore
-                                                            .instance
-                                                            .collection('users')
-                                                            .where(
-                                                              'firstName',
-                                                              isEqualTo:
-                                                                  firstName,
-                                                            )
-                                                            .where(
-                                                              'lastName',
-                                                              isEqualTo:
-                                                                  lastName,
-                                                            )
-                                                            .limit(1)
-                                                            .get();
-
-                                                    String realUserId;
-                                                    if (userQuery
-                                                        .docs
-                                                        .isNotEmpty) {
-                                                      realUserId =
-                                                          userQuery
-                                                              .docs
-                                                              .first
-                                                              .id;
-                                                      print(
-                                                        "✅ Found matching userId: $realUserId",
-                                                      );
-                                                    } else {
-                                                      realUserId =
-                                                          schedulePatientId; // fallback
-                                                      print(
-                                                        "⚠️ No user found by name, using schedule ID: $realUserId",
-                                                      );
-                                                    }
-
-                                                    print(
-                                                      "🔗 Real userId used: $realUserId",
-                                                    );
-
-                                                    // 🧾 FIXED 🔍 Check if today's record (e.g. 2025-10-19_pre) exists
-                                                    final recordsCollection =
-                                                        FirebaseFirestore
-                                                            .instance
-                                                            .collection('users')
-                                                            .doc(realUserId)
-                                                            .collection(
-                                                              'records',
-                                                            );
-
-                                                    final querySnap =
-                                                        await recordsCollection
-                                                            .where(
-                                                              FieldPath
-                                                                  .documentId,
-                                                              isGreaterThanOrEqualTo:
-                                                                  todayKey,
-                                                            )
-                                                            .where(
-                                                              FieldPath
-                                                                  .documentId,
-                                                              isLessThan:
-                                                                  '${todayKey}_z',
-                                                            )
-                                                            .get();
-
-                                                    final hasTodayRecord =
-                                                        querySnap
-                                                            .docs
-                                                            .isNotEmpty;
-                                                    final existingRecordId =
-                                                        hasTodayRecord
-                                                            ? querySnap
-                                                                .docs
-                                                                .first
-                                                                .id
-                                                            : null;
-
-                                                    print(
-                                                      "🧾 Found today's record? $hasTodayRecord (id: $existingRecordId)",
-                                                    );
-
-                                                    if (!context.mounted)
-                                                      return;
-
-                                                    // 🧭 Ask what to do next
-                                                    showDialog(
-                                                      context: context,
-                                                      builder:
-                                                          (ctx) => AlertDialog(
-                                                            shape: RoundedRectangleBorder(
-                                                              borderRadius:
-                                                                  BorderRadius.circular(
-                                                                    16,
-                                                                  ),
-                                                            ),
-                                                            title: Text(
-                                                              'Dialysis Record Action - ${p['name'] ?? ''}',
-                                                              style: const TextStyle(
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .bold,
-                                                              ),
-                                                            ),
-                                                            content: Text(
-                                                              hasTodayRecord
-                                                                  ? 'A dialysis record for ${p['name'] ?? ''} already exists for today. Would you like to edit it instead?'
-                                                                  : 'No dialysis record found for ${p['name'] ?? ''} today. Would you like to add one now?',
-                                                            ),
-                                                            actions: [
-                                                              TextButton(
-                                                                onPressed:
-                                                                    () =>
-                                                                        Navigator.pop(
-                                                                          ctx,
-                                                                        ),
-                                                                child:
-                                                                    const Text(
-                                                                      'Cancel',
-                                                                    ),
-                                                              ),
-                                                              FilledButton(
-                                                                onPressed: () {
-                                                                  Navigator.pop(
-                                                                    ctx,
-                                                                  );
-                                                                  Navigator.push(
-                                                                    context,
-                                                                    MaterialPageRoute(
-                                                                      builder:
-                                                                          (_) =>
-                                                                              hasTodayRecord
-                                                                                  ? PatientDetailScreen(
-                                                                                    patientId:
-                                                                                        realUserId,
-                                                                                    centerId:
-                                                                                        widget.centerId,
-                                                                                    centerName:
-                                                                                        widget.centerName,
-                                                                                  )
-                                                                                  : AddPatientRecordScreen(
-                                                                                    patientId:
-                                                                                        realUserId,
-                                                                                    centerId:
-                                                                                        widget.centerId,
-                                                                                    centerName:
-                                                                                        widget.centerName,
-                                                                                  ),
-                                                                    ),
-                                                                  );
-                                                                },
-                                                                child: Text(
-                                                                  hasTodayRecord
-                                                                      ? "Edit Today's Record"
-                                                                      : "Add New Record",
-                                                                ),
-                                                              ),
-                                                            ],
-                                                          ),
-                                                    );
-                                                  } catch (e) {
-                                                    print(
-                                                      "⚠️ Error checking record: $e",
-                                                    );
-                                                    ScaffoldMessenger.of(
-                                                      context,
-                                                    ).showSnackBar(
-                                                      SnackBar(
-                                                        content: Text(
-                                                          'Error checking record: $e',
-                                                        ),
-                                                      ),
-                                                    );
-                                                  }
-                                                },
-
-                                                child: Text(
-                                                  p['name'] ?? '',
-                                                  style: TextStyle(
-                                                    fontSize: 13,
-                                                    decoration:
-                                                        isDone
-                                                            ? TextDecoration
-                                                                .lineThrough
-                                                            : null,
-                                                    color:
-                                                        isDone
-                                                            ? Colors.grey
-                                                            : Colors
-                                                                .teal
-                                                                .shade900,
-                                                    fontWeight: FontWeight.w500,
-                                                  ),
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                ),
-                                              ),
-                                            ),
-
-                                            Row(
-                                              children: [
-                                                IconButton(
-                                                  icon: Icon(
-                                                    isDone
-                                                        ? Icons.check_box
-                                                        : Icons
-                                                            .check_box_outline_blank,
-                                                    color: Colors.teal,
-                                                    size: 18,
-                                                  ),
-                                                  tooltip:
-                                                      isDone
-                                                          ? 'Mark as not done'
-                                                          : 'Mark as done',
-                                                  onPressed: () async {
-                                                    final docRef =
-                                                        FirebaseFirestore
-                                                            .instance
-                                                            .collection(
-                                                              'centers',
-                                                            )
-                                                            .doc(
-                                                              widget.centerId,
-                                                            )
-                                                            .collection(
-                                                              'schedules',
-                                                            )
-                                                            .doc(p['id']);
-                                                    await docRef.update({
-                                                      'isDoneByDay.$key':
-                                                          !isDone,
-                                                    });
-                                                  },
-                                                ),
-                                                IconButton(
-                                                  icon: const Icon(
-                                                    Icons.delete,
-                                                    size: 18,
-                                                    color: Colors.red,
-                                                  ),
-                                                  tooltip:
-                                                      'Remove from schedule',
-                                                  onPressed: () async {
-                                                    await _confirmAndDeleteSchedule(
-                                                      p['id']!,
-                                                      p['name'] ?? '',
-                                                    );
-                                                  },
-                                                ),
-                                              ],
-                                            ),
-                                          ],
-                                        );
-                                      }).toList(),
-                                ),
-                              );
-                            }).toList(),
-                          ],
-                        );
-                      }),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _tableHeader(String text) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
-    child: Center(
-      child: Text(
-        text,
-        textAlign: TextAlign.center,
-        style: const TextStyle(
-          fontWeight: FontWeight.bold,
-          fontSize: 18, // 🔹 increased from 14
-          color: Color(0xFF045347),
-        ),
-      ),
-    ),
+      // Always return the ScheduleCard widget (ensures non-null Widget is returned)
+      return ScheduleCard(
+        weekRange: weekRange,
+        weekDays: weekDays,
+        shifts: shifts,
+        table: table,
+        centerId: widget.centerId,
+        centerName: widget.centerName,
+        onDeleteSchedule: _confirmAndDeleteSchedule, // Pass the function as a callback
+      );
+    },
   );
-
-  Widget _tableCell(
-    String text, {
-    bool isHeader = false,
-    TextAlign align = TextAlign.left,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-      child: Text(
-        text,
-        textAlign: align,
-        style: TextStyle(
-          fontWeight: isHeader ? FontWeight.bold : FontWeight.w500,
-          fontSize: isHeader ? 18 : 16, // 🔹 larger for both header and content
-          color: isHeader ? Colors.teal.shade800 : Colors.black87,
-        ),
-      ),
-    );
-  }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -1326,7 +889,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Container(
                   color: const Color(0xFF045347),
                   padding: const EdgeInsets.symmetric(
-                    vertical: 16,
+                    vertical: 20,
                     horizontal: 24,
                   ),
                   child: Row(
