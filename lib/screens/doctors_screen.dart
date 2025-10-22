@@ -28,11 +28,10 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
   // --- Doctor list UI ---
   Widget _buildDoctorsList() {
     return StreamBuilder<QuerySnapshot>(
-      stream:
-          FirebaseFirestore.instance
-              .collection('doctor_inCharge')
-              .where('centerId', isEqualTo: widget.centerId)
-              .snapshots(),
+      stream: FirebaseFirestore.instance
+          .collection('doctor_inCharge')
+          .where('centerId', isEqualTo: widget.centerId)
+          .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return const Center(child: Text('Error loading doctors.'));
@@ -45,14 +44,13 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
 
         // 🔍 Apply search filter
         if (searchQuery.isNotEmpty) {
-          docs =
-              docs.where((doc) {
-                final data = doc.data() as Map<String, dynamic>;
-                final name = (data['name'] ?? '').toString().toLowerCase();
-                final email = (data['email'] ?? '').toString().toLowerCase();
-                return name.contains(searchQuery.toLowerCase()) ||
-                    email.contains(searchQuery.toLowerCase());
-              }).toList();
+          docs = docs.where((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            final name = (data['name'] ?? '').toString().toLowerCase();
+            final email = (data['email'] ?? '').toString().toLowerCase();
+            return name.contains(searchQuery.toLowerCase()) ||
+                email.contains(searchQuery.toLowerCase());
+          }).toList();
         }
 
         if (docs.isEmpty) {
@@ -74,6 +72,12 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
             final doctorContact = data['contact'] ?? 'No contact';
             final doctorEmail = data['email'] ?? 'No email';
 
+            // ✅ --- START: Avatar Logic ---
+            final String? profileUrl = data['photoUrl'];
+            final String initial =
+                doctorName.isNotEmpty ? doctorName[0].toUpperCase() : '?';
+            // ✅ --- END: Avatar Logic ---
+
             return AnimatedContainer(
               duration: const Duration(milliseconds: 250),
               curve: Curves.easeInOut,
@@ -89,13 +93,12 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder:
-                            (context) => DoctorDetailScreen(
-                              doctorId: doctor.id,
-                              doctorName: doctorName,
-                              centerId: widget.centerId,
-                              centerName: widget.centerName,
-                            ),
+                        builder: (context) => DoctorDetailScreen(
+                          doctorId: doctor.id,
+                          doctorName: doctorName,
+                          centerId: widget.centerId,
+                          centerName: widget.centerName,
+                        ),
                       ),
                     );
                   },
@@ -107,15 +110,28 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const CircleAvatar(
+                        // ✅ --- START: Updated CircleAvatar ---
+                        CircleAvatar(
                           radius: 28,
-                          backgroundColor: primaryColor,
-                          child: Icon(
-                            Icons.person,
-                            color: Colors.white,
-                            size: 30,
-                          ),
+                          backgroundColor:
+                              Colors.teal.shade100, // Light background
+                          backgroundImage:
+                              (profileUrl != null && profileUrl.isNotEmpty)
+                                  ? NetworkImage(profileUrl)
+                                  : null, // Display image if it exists
+                          child: (profileUrl == null || profileUrl.isEmpty)
+                              ? Text(
+                                  // Display initial if no image
+                                  initial,
+                                  style: const TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: darkerPrimaryColor, // Dark text
+                                  ),
+                                )
+                              : null,
                         ),
+                        // ✅ --- END: Updated CircleAvatar ---
                         const SizedBox(width: 18),
                         Expanded(
                           child: Column(
@@ -297,9 +313,9 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                           UserCredential userCredential = await FirebaseAuth
                               .instance
                               .createUserWithEmailAndPassword(
-                                email: email,
-                                password: password,
-                              );
+                            email: email,
+                            password: password,
+                          );
 
                           String doctorId = userCredential.user!.uid;
 
@@ -307,13 +323,13 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                               .collection("doctor_inCharge")
                               .doc(doctorId)
                               .set({
-                                "name": "$firstName $lastName",
-                                "firstName": firstName,
-                                "lastName": lastName,
-                                "email": email,
-                                "centerId": widget.centerId,
-                                "createdAt": FieldValue.serverTimestamp(),
-                              });
+                            "name": "$firstName $lastName",
+                            "firstName": firstName,
+                            "lastName": lastName,
+                            "email": email,
+                            "centerId": widget.centerId,
+                            "createdAt": FieldValue.serverTimestamp(),
+                          });
 
                           await FirebaseFirestore.instance
                               .collection("doctors_centers")
@@ -321,12 +337,12 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                               .collection("doctors_center_collection")
                               .doc(doctorId)
                               .set({
-                                "doctorId": doctorId,
-                                "name": "$firstName $lastName",
-                                "email": email,
-                                "centerId": widget.centerId,
-                                "createdAt": FieldValue.serverTimestamp(),
-                              });
+                            "doctorId": doctorId,
+                            "name": "$firstName $lastName",
+                            "email": email,
+                            "centerId": widget.centerId,
+                            "createdAt": FieldValue.serverTimestamp(),
+                          });
 
                           Navigator.pop(context);
                           _showSnack(
@@ -371,10 +387,9 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
         obscureText: obscureText,
         keyboardType: keyboardType,
         decoration: InputDecoration(
-          prefixIcon:
-              icon != null
-                  ? Icon(icon, color: primaryColor)
-                  : const Icon(Icons.circle, color: Colors.transparent),
+          prefixIcon: icon != null
+              ? Icon(icon, color: primaryColor)
+              : const Icon(Icons.circle, color: Colors.transparent),
           labelText: label,
           filled: true,
           fillColor: Colors.grey.shade50,
@@ -423,7 +438,7 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 24,
-                    vertical: 16,
+                    vertical: 23.5,
                   ),
                   color: darkerPrimaryColor,
                   child: Text(
@@ -438,7 +453,7 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
 
                 // 🔍 Search Bar
                 const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                   child: Text(
                     'Doctors List',
                     style: TextStyle(
@@ -456,8 +471,8 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                     vertical: 12,
                   ),
                   child: TextField(
-                    onChanged:
-                        (value) => setState(() => searchQuery = value.trim()),
+                    onChanged: (value) =>
+                        setState(() => searchQuery = value.trim()),
                     decoration: InputDecoration(
                       hintText: 'Search doctors by name or email...',
                       prefixIcon: const Icon(Icons.search, color: primaryColor),
